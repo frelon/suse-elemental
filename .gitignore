@@ -11,3 +11,6 @@ go.work.sum
 
 # env file
 .env
+
+# coverage report
+coverprofile.out
