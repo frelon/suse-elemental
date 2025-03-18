@@ -10,7 +10,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.23.0
 	github.com/onsi/gomega v1.36.2
 	github.com/sirupsen/logrus v1.9.3
-	github.com/suse/elemental v0.0.0-20250228142830-404c12c956c8
 	github.com/twpayne/go-vfs/v4 v4.3.0
 	github.com/urfave/cli/v2 v2.27.6
 	k8s.io/mount-utils v0.32.3

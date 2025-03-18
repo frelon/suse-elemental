@@ -20,8 +20,9 @@ package action
 import (
 	"log"
 
-	"github.com/suse/elemental/internal/cli/cmd"
 	"github.com/urfave/cli/v2"
+
+	"github.com/suse/elemental/v3/internal/cli/cmd"
 )
 
 func Build(*cli.Context) error {
