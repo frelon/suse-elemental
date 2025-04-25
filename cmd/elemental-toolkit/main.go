@@ -21,10 +21,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/suse/elemental/v3/internal/cli/action"
 	"github.com/suse/elemental/v3/internal/cli/cmd"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {

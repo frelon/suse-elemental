@@ -15,5 +15,5 @@ go.work.sum
 # coverage report
 coverprofile.out
 
-# elemental binary
-elemental
+# elemental binaries
+elemental-toolkit

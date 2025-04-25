@@ -18,8 +18,8 @@ ifeq ($(VERBOSE),true)
 	VERBOSE_TEST?=-v
 endif
 
-elemental: $(GO_FILES)
-	go build -ldflags '$(LDFLAGS)' -o $@ ./cmd/...
+elemental-toolkit: $(GO_FILES)
+	go build -ldflags '$(LDFLAGS)' -o $@ ./cmd/elemental-toolkit
 
 .PHONY: unit-tests
 unit-tests:
