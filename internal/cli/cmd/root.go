@@ -18,57 +18,35 @@ limitations under the License.
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/urfave/cli/v2"
 
 	"github.com/suse/elemental/v3/pkg/log"
 	"github.com/suse/elemental/v3/pkg/sys"
 )
 
-type GlobalFlags struct {
-	Debug bool
-}
+const Usage = "Build, install and upgrade infrastructure platforms"
 
-var GlobalArgs GlobalFlags
-
-func appName() string {
-	return filepath.Base(os.Args[0])
-}
-
-func globalFlags() []cli.Flag {
+func GlobalFlags() []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
-			Name:        "debug",
-			Usage:       "Set logging at debug level",
-			Destination: &GlobalArgs.Debug,
+			Name:  "debug",
+			Usage: "Set logging at debug level",
 		},
 	}
 }
 
-func NewApp() *cli.App {
-	app := cli.NewApp()
-
-	app.Flags = globalFlags()
-	app.Name = appName()
-	app.Usage = "Build, install and upgrade infrastructure platforms"
-	app.Suggest = true
-	app.Before = func(ctx *cli.Context) error {
-		s, err := sys.NewSystem()
-		if err != nil {
-			return err
-		}
-
-		if ctx.Bool("debug") {
-			s.Logger().SetLevel(log.DebugLevel())
-		}
-		if ctx.App.Metadata == nil {
-			ctx.App.Metadata = map[string]any{}
-		}
-		ctx.App.Metadata["system"] = s
-		return nil
+func Setup(ctx *cli.Context) error {
+	s, err := sys.NewSystem()
+	if err != nil {
+		return err
 	}
 
-	return app
+	if ctx.Bool("debug") {
+		s.Logger().SetLevel(log.DebugLevel())
+	}
+	if ctx.App.Metadata == nil {
+		ctx.App.Metadata = map[string]any{}
+	}
+	ctx.App.Metadata["system"] = s
+	return nil
 }

@@ -22,22 +22,24 @@ import (
 	"os"
 
 	"github.com/suse/elemental/v3/internal/cli/action"
+	"github.com/suse/elemental/v3/internal/cli/app"
 	"github.com/suse/elemental/v3/internal/cli/cmd"
 	"github.com/suse/elemental/v3/internal/cli/version"
-	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	app := cmd.NewApp()
-	app.Commands = []*cli.Command{
-		cmd.NewBuildCommand(action.Build),
-		cmd.NewInstallCommand(action.Install),
-		cmd.NewUpgradeCommand(action.Upgrade),
-		cmd.NewUnpackImageCommand(action.Unpack),
-		version.NewVersionCommand(app.Name),
-	}
+	appName := app.Name()
+	application := app.New(
+		cmd.Usage,
+		cmd.GlobalFlags(),
+		cmd.Setup,
+		cmd.NewBuildCommand(appName, action.Build),
+		cmd.NewInstallCommand(appName, action.Install),
+		cmd.NewUpgradeCommand(appName, action.Upgrade),
+		cmd.NewUnpackImageCommand(appName, action.Unpack),
+		version.NewVersionCommand(appName))
 
-	if err := app.Run(os.Args); err != nil {
+	if err := application.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

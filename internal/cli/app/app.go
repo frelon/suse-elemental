@@ -15,33 +15,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package app
 
 import (
-	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 )
 
-type UpgradeFlags struct {
-	OperatingSystemImage string
+func Name() string {
+	return filepath.Base(os.Args[0])
 }
 
-var UpgradeArgs UpgradeFlags
+func New(usage string, globalFlags []cli.Flag, setupFunc cli.BeforeFunc, commands ...*cli.Command) *cli.App {
+	app := cli.NewApp()
 
-func NewUpgradeCommand(appName string, action func(*cli.Context) error) *cli.Command {
-	return &cli.Command{
-		Name:      "upgrade",
-		Usage:     "Upgrade system from an OS image",
-		UsageText: fmt.Sprintf("%s upgrade [OPTIONS]", appName),
-		Action:    action,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "os-image",
-				Usage:       "image containing the operating system",
-				Destination: &UpgradeArgs.OperatingSystemImage,
-				Required:    true,
-			},
-		},
-	}
+	app.Flags = globalFlags
+	app.Name = Name()
+	app.Commands = commands
+	app.Usage = usage
+	app.Suggest = true
+	app.Before = setupFunc
+
+	return app
 }

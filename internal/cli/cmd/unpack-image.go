@@ -33,11 +33,11 @@ type UnpackFlags struct {
 
 var UnpackArgs UnpackFlags
 
-func NewUnpackImageCommand(action func(*cli.Context) error) *cli.Command {
+func NewUnpackImageCommand(appName string, action func(*cli.Context) error) *cli.Command {
 	return &cli.Command{
 		Name:      "unpack-image",
 		Usage:     "Unpacks an image to the specified location",
-		UsageText: fmt.Sprintf("%s unpack-image [OPTIONS]", appName()),
+		UsageText: fmt.Sprintf("%s unpack-image [OPTIONS]", appName),
 		Action:    action,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
