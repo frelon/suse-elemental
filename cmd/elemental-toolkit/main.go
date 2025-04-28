@@ -23,6 +23,7 @@ import (
 
 	"github.com/suse/elemental/v3/internal/cli/action"
 	"github.com/suse/elemental/v3/internal/cli/cmd"
+	"github.com/suse/elemental/v3/internal/cli/version"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,7 +34,7 @@ func main() {
 		cmd.NewInstallCommand(action.Install),
 		cmd.NewUpgradeCommand(action.Upgrade),
 		cmd.NewUnpackImageCommand(action.Unpack),
-		cmd.NewVersionCommand(),
+		version.NewVersionCommand(app.Name),
 	}
 
 	if err := app.Run(os.Args); err != nil {

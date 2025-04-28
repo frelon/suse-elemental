@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package version
 
 import (
 	"fmt"
@@ -29,12 +29,12 @@ var (
 	gitCommit = ""
 )
 
-func NewVersionCommand() *cli.Command {
+func NewVersionCommand(appName string) *cli.Command {
 	return &cli.Command{
 		Name:      "version",
 		Aliases:   []string{"v"},
 		Usage:     "Inspect program version",
-		UsageText: fmt.Sprintf("%s version", appName()),
+		UsageText: fmt.Sprintf("%s version", appName),
 		Action: func(*cli.Context) error {
 			commit := gitCommit
 			if len(commit) > 7 {
