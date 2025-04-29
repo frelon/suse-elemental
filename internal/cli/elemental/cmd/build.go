@@ -24,8 +24,9 @@ import (
 )
 
 type BuildFlags struct {
-	OperatingSystemImage string
-	ConfigDir            string
+	ImageType    string
+	Architecture string
+	ConfigDir    string
 }
 
 var BuildArgs BuildFlags
@@ -38,14 +39,22 @@ func NewBuildCommand(appName string, action func(*cli.Context) error) *cli.Comma
 		Action:    action,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "os-image",
-				Usage:       "OCI image containing the operating system",
-				Destination: &BuildArgs.OperatingSystemImage,
+				Name:        "image-type",
+				Usage:       "Type of image artifact to build (RAW or ISO)",
+				Destination: &BuildArgs.ImageType,
+				Required:    true,
+			},
+			&cli.StringFlag{
+				Name:        "arch",
+				Usage:       "Target architecture for the image (x86_64 or aarch64)",
+				Destination: &BuildArgs.Architecture,
+				Required:    true,
 			},
 			&cli.StringFlag{
 				Name:        "config-dir",
 				Usage:       "Full path to the image configuration directory",
 				Destination: &BuildArgs.ConfigDir,
+				Required:    true,
 			},
 		},
 	}
