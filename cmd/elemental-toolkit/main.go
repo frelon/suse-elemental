@@ -33,7 +33,6 @@ func main() {
 		cmd.Usage,
 		cmd.GlobalFlags(),
 		cmd.Setup,
-		cmd.NewBuildCommand(appName, action.Build),
 		cmd.NewInstallCommand(appName, action.Install),
 		cmd.NewUpgradeCommand(appName, action.Upgrade),
 		cmd.NewUnpackImageCommand(appName, action.Unpack),
