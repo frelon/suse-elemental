@@ -24,7 +24,7 @@ import (
 	"github.com/suse/elemental/v3/pkg/sys"
 )
 
-const Usage = "Build, install and upgrade infrastructure platforms"
+const Usage = "Install and upgrade immutable operating systems"
 
 func GlobalFlags() []cli.Flag {
 	return []cli.Flag{
