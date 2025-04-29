@@ -29,6 +29,9 @@ ifeq ($(VERBOSE),true)
 	VERBOSE_TEST?=-v
 endif
 
+elemental: $(GO_FILES)
+	go build -ldflags '$(LDFLAGS)' -o $@ ./cmd/elemental
+
 elemental-toolkit: $(GO_FILES)
 	go build $(GO_BUILD_ARGS) -o $@ ./cmd/elemental-toolkit
 
