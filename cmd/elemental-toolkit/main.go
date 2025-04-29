@@ -21,9 +21,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/suse/elemental/v3/internal/cli/action"
 	"github.com/suse/elemental/v3/internal/cli/app"
-	"github.com/suse/elemental/v3/internal/cli/cmd"
+	"github.com/suse/elemental/v3/internal/cli/elemental-toolkit/action"
+	"github.com/suse/elemental/v3/internal/cli/elemental-toolkit/cmd"
 	"github.com/suse/elemental/v3/internal/cli/version"
 )
 

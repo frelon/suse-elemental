@@ -25,7 +25,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"sigs.k8s.io/yaml"
 
-	"github.com/suse/elemental/v3/internal/cli/cmd"
+	"github.com/suse/elemental/v3/internal/cli/elemental-toolkit/cmd"
 	"github.com/suse/elemental/v3/pkg/deployment"
 	"github.com/suse/elemental/v3/pkg/install"
 	"github.com/suse/elemental/v3/pkg/sys"
