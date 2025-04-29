@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/suse/elemental/v3/internal/cli/app"
+	"github.com/suse/elemental/v3/internal/cli/elemental/action"
 	"github.com/suse/elemental/v3/internal/cli/elemental/cmd"
 	"github.com/suse/elemental/v3/internal/cli/version"
 )
@@ -32,6 +33,7 @@ func main() {
 		cmd.Usage,
 		cmd.GlobalFlags(),
 		cmd.Setup,
+		cmd.NewBuildCommand(appName, action.Build),
 		version.NewVersionCommand(appName))
 
 	if err := application.Run(os.Args); err != nil {

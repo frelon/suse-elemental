@@ -22,7 +22,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/suse/elemental/v3/internal/cli/elemental-toolkit/cmd"
+	"github.com/suse/elemental/v3/internal/cli/elemental/cmd"
 )
 
 func Build(*cli.Context) error {
