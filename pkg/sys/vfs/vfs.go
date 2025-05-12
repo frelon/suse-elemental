@@ -615,3 +615,39 @@ func WriteEnvFile(fs FS, envs map[string]string, filename string) error {
 	}
 	return nil
 }
+
+// FindKernel finds for kernel files inside a given root tree path.
+// Returns kernel file and version. It assumes kernel files match certain patterns
+func FindKernel(fs FS, rootDir string) (string, string, error) {
+	var kernel, version string
+	var err error
+
+	kernelModulesDir := "/usr/lib/modules"
+
+	kernelPatterns := []string{
+		"/usr/lib/modules/*/uImage*",
+		"/usr/lib/modules/*/Image*",
+		"/usr/lib/modules/*/zImage*",
+		"/usr/lib/modules/*/vmlinuz*",
+		"/usr/lib/modules/*/image*",
+	}
+
+	kernel, err = FindFile(fs, rootDir, kernelPatterns...)
+	if err != nil {
+		return "", "", fmt.Errorf("no Kernel file found: %w", err)
+	}
+	files, err := fs.ReadDir(filepath.Join(rootDir, kernelModulesDir))
+	if err != nil {
+		return "", "", fmt.Errorf("failed reading modules directory: %w", err)
+	}
+	for _, f := range files {
+		if strings.Contains(kernel, f.Name()) {
+			version = f.Name()
+			break
+		}
+	}
+	if version == "" {
+		return "", "", fmt.Errorf("could not determine the version of kernel %s", kernel)
+	}
+	return kernel, version, nil
+}
