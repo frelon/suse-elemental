@@ -78,25 +78,34 @@ func (g *Grub) Install(rootPath string, esp *deployment.Partition) error {
 	return g.updateBootEntries(rootPath, esp, entry)
 }
 
-// installElementalEFI installs the efi applications (shim, MokManager, grub.efi) into the ESP
+// installElementalEFI installs the efi applications (shim, MokManager, grub.efi) and grub.cfg into the ESP.
 func (g *Grub) installElementalEFI(rootPath string, esp *deployment.Partition) error {
 	g.s.Logger().Info("Installing EFI applications")
 
-	targetDir := filepath.Join(rootPath, esp.MountPoint, "EFI", "ELEMENTAL")
-	err := vfs.MkdirAll(g.s.FS(), targetDir, vfs.DirPerm)
-	if err != nil {
-		g.s.Logger().Error("Error creating EFI dir '%s': %s", targetDir, err.Error())
-		return err
-	}
-
-	srcDir := filepath.Join(rootPath, "usr", "share", "efi", g.s.Platform().Arch)
-	for _, name := range []string{"shim.efi", "grub.efi", "MokManager.efi"} {
-		src := filepath.Join(srcDir, name)
-		target := filepath.Join(targetDir, name)
-		err = vfs.CopyFile(g.s.FS(), src, target)
+	for _, efiEntry := range []string{"BOOT", "ELEMENTAL"} {
+		targetDir := filepath.Join(rootPath, esp.MountPoint, "EFI", efiEntry)
+		err := vfs.MkdirAll(g.s.FS(), targetDir, vfs.DirPerm)
 		if err != nil {
-			g.s.Logger().Error("Error copying EFI app '%s': %s", src, err.Error())
+			g.s.Logger().Error("Error creating EFI dir '%s': %s", targetDir, err.Error())
 			return err
+		}
+
+		srcDir := filepath.Join(rootPath, "usr", "share", "efi", g.s.Platform().Arch)
+		for _, name := range []string{"shim.efi", "grub.efi", "MokManager.efi"} {
+			src := filepath.Join(srcDir, name)
+			target := filepath.Join(targetDir, name)
+			err = vfs.CopyFile(g.s.FS(), src, target)
+			if err != nil {
+				g.s.Logger().Error("Error copying EFI app '%s': %s", src, err.Error())
+				return err
+			}
+		}
+
+		// Copy grub config if it exists.
+		grubCfg := filepath.Join(rootPath, "usr/lib/elemental/bootloader/grub.cfg")
+		err = vfs.CopyFile(g.s.FS(), grubCfg, targetDir)
+		if err != nil {
+			g.s.Logger().Warn("Failed copying grub.cfg: %s, skipping", err.Error())
 		}
 	}
 
