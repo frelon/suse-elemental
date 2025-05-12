@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/suse/elemental/v3/pkg/chroot"
 	"github.com/suse/elemental/v3/pkg/deployment"
@@ -32,12 +33,21 @@ type Grub struct {
 	s *sys.System
 }
 
+type grubBootEntry struct {
+	linux       string
+	initrd      string
+	cmdline     string
+	displayName string
+	id          string
+}
+
 func NewGrub(s *sys.System) *Grub {
 	return &Grub{s}
 }
 
 const (
-	OsReleasePath = "/etc/os-release"
+	OsReleasePath  = "/etc/os-release"
+	DefaultCmdline = "rw quiet"
 )
 
 // Install installs the bootloader to the specified root.
@@ -60,16 +70,15 @@ func (g *Grub) Install(rootPath string, esp *deployment.Partition) error {
 		return err
 	}
 
-	err = g.installKernelInitrd(rootPath, esp)
+	entry, err := g.installKernelInitrd(rootPath, esp)
 	if err != nil {
 		g.s.Logger().Error("Error installing kernel+initrd: %s", err.Error())
-		return err
 	}
 
-	// UpdateBootEntries()
-	return nil
+	return g.updateBootEntries(rootPath, esp, entry)
 }
 
+// installElementalEFI installs the efi applications (shim, MokManager, grub.efi) into the ESP
 func (g *Grub) installElementalEFI(rootPath string, esp *deployment.Partition) error {
 	g.s.Logger().Info("Installing EFI applications")
 
@@ -94,51 +103,93 @@ func (g *Grub) installElementalEFI(rootPath string, esp *deployment.Partition) e
 	return nil
 }
 
-func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) error {
+// installKernelInitrd copies the kernel to the ESP and generates an initrd using dracut.
+func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (grubBootEntry, error) {
 	g.s.Logger().Info("Installing kernel/initrd")
 
 	osVars, err := vfs.LoadEnvFile(g.s.FS(), filepath.Join(rootPath, OsReleasePath))
 	if err != nil {
 		g.s.Logger().Info("Error loading %s vars: %s", OsReleasePath, err.Error())
-		return err
+		return grubBootEntry{}, err
 	}
 
 	var (
-		osId string
+		osID string
 		ok   bool
 	)
-	if osId, ok = osVars["ID"]; !ok {
+	if osID, ok = osVars["ID"]; !ok {
 		g.s.Logger().Error("Error /etc/os-release ID var not set.")
-		return fmt.Errorf("/etc/os-release ID not set")
+		return grubBootEntry{}, fmt.Errorf("/etc/os-release ID not set")
 	}
 
 	kernel, kernelVersion, err := vfs.FindKernel(g.s.FS(), rootPath)
 	if err != nil {
 		g.s.Logger().Info("Error loading finding kernel: %s", err.Error())
-		return err
+		return grubBootEntry{}, err
 	}
 
-	targetDir := filepath.Join(rootPath, esp.MountPoint, osId, kernelVersion)
-
+	targetDir := filepath.Join(rootPath, esp.MountPoint, osID, kernelVersion)
 	err = vfs.MkdirAll(g.s.FS(), targetDir, vfs.DirPerm)
 	if err != nil {
 		g.s.Logger().Info("Error creating kernel dir '%s': %s", targetDir, err.Error())
-		return err
+		return grubBootEntry{}, err
 	}
 
 	err = vfs.CopyFile(g.s.FS(), kernel, targetDir)
 	if err != nil {
 		g.s.Logger().Info("Error copying kernel '%s': %s", targetDir, err.Error())
-		return err
+		return grubBootEntry{}, err
 	}
 
+	initrdPath := filepath.Join(esp.MountPoint, osID, kernelVersion, "initrd")
 	// chroot into rootPath to use glibc/dracut of the image, since otherwise we could get linker errors if glibc version is not matching between live system and installed system.
-	return chroot.ChrootedCallback(g.s, rootPath, nil, func() error {
-		stdOut, err := g.s.Runner().Run("dracut", "--force", "--no-hostonly", filepath.Join(esp.MountPoint, osId, kernelVersion, "initrd"), kernelVersion)
+	err = chroot.ChrootedCallback(g.s, rootPath, nil, func() error {
+		stdOut, err := g.s.Runner().Run("dracut", "--force", "--no-hostonly", initrdPath, kernelVersion)
 		g.s.Logger().Debug("Dracut stdout: %s", string(stdOut))
 		if err != nil {
-			g.s.Logger().Error("Error regenerating initrd: %s", err.Error())
+			g.s.Logger().Error("Error generating initrd: %s", err.Error())
 		}
 		return nil
 	})
+	if err != nil {
+		return grubBootEntry{}, err
+	}
+
+	return grubBootEntry{
+		linux:       filepath.Join(esp.MountPoint, osID, kernelVersion, filepath.Base(kernel)),
+		initrd:      initrdPath,
+		displayName: osVars["NAME"],
+		cmdline:     DefaultCmdline,
+		id:          "active",
+	}, nil
+}
+
+func (g *Grub) updateBootEntries(rootPath string, esp *deployment.Partition, entries ...grubBootEntry) error {
+	activeEntries := []string{}
+
+	err := vfs.MkdirAll(g.s.FS(), filepath.Join(rootPath, esp.MountPoint, "loader", "entries"), vfs.DirPerm)
+	if err != nil {
+		g.s.Logger().Error("Failed creating loader dir: %s:", err.Error())
+		return err
+	}
+
+	for _, entry := range entries {
+		displayName := fmt.Sprintf("displayName=%s", entry.displayName)
+		linux := fmt.Sprintf("linux=%s", entry.linux)
+		initrd := fmt.Sprintf("initrd=%s", entry.initrd)
+		cmdline := fmt.Sprintf("cmdline=%s", entry.cmdline)
+
+		stdOut, err := g.s.Runner().Run("grub2-editenv", filepath.Join(rootPath, esp.MountPoint, "loader", "entries", entry.id), "set", displayName, linux, initrd, cmdline)
+		g.s.Logger().Debug("grub2-editenv stdout: %s", string(stdOut))
+		if err != nil {
+			return err
+		}
+
+		activeEntries = append(activeEntries, entry.id)
+	}
+
+	stdOut, err := g.s.Runner().Run("grub2-editenv", filepath.Join(rootPath, esp.MountPoint, "grubenv"), "set", fmt.Sprintf("entries=%s", strings.Join(activeEntries, " ")))
+	g.s.Logger().Debug("grub2-editenv stdout: %s", string(stdOut))
+
+	return err
 }
