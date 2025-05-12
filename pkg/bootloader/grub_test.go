@@ -19,7 +19,9 @@ package bootloader_test
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -38,14 +40,43 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 	var cleanup func()
 	var grub *bootloader.Grub
 	var esp *deployment.Partition
+	var runner *sysmock.Runner
+	var syscall *sysmock.Syscall
+	var mounter *sysmock.Mounter
 	BeforeEach(func() {
 		var err error
-		tfs, cleanup, err = sysmock.TestFS(nil)
+		tfs, cleanup, err = sysmock.TestFS(map[string]any{
+			"/dev/pts/empty": []byte{},
+			"/proc/empty":    []byte{},
+			"/sys/empty":     []byte{},
+		})
+
 		Expect(err).NotTo(HaveOccurred())
+
+		runner = sysmock.NewRunner()
+		syscall = &sysmock.Syscall{}
+		mounter = sysmock.NewMounter()
 		s, err = sys.NewSystem(
-			sys.WithFS(tfs), sys.WithLogger(log.New(log.WithDiscardAll())),
+			sys.WithSyscall(syscall),
+			sys.WithRunner(runner),
+			sys.WithFS(tfs),
+			sys.WithLogger(log.New(log.WithDiscardAll())),
+			sys.WithMounter(mounter),
 		)
 		Expect(err).NotTo(HaveOccurred())
+
+		runner.SideEffect = func(command string, args ...string) ([]byte, error) {
+			switch filepath.Base(command) {
+			// create the initrd specified in the second-to-last argument. (inside /target/dir, since the real code chroots into the install target
+			case "dracut":
+				initrdPath := args[len(args)-2]
+				_, err := tfs.Create(filepath.Join("/target/dir", initrdPath))
+				Expect(err).NotTo(HaveOccurred())
+				return nil, nil
+			}
+
+			return nil, fmt.Errorf("command '%s', %w", command, errors.ErrUnsupported)
+		}
 
 		esp = &deployment.Partition{
 			Role:       deployment.EFI,
@@ -54,6 +85,7 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 
 		grub = bootloader.NewGrub(s)
 
+		// Setup GRUB and EFI dirs
 		Expect(vfs.MkdirAll(tfs, "/target/dir/usr/share/efi/x86_64", vfs.DirPerm)).To(Succeed())
 		Expect(vfs.MkdirAll(tfs, "/target/dir/usr/share/efi/aarch64", vfs.DirPerm)).To(Succeed())
 		Expect(vfs.MkdirAll(tfs, "/target/dir/usr/share/grub2/x86_64-efi", vfs.DirPerm)).To(Succeed())
@@ -66,7 +98,12 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 		Expect(tfs.Symlink("/target/dir/usr/share/efi/x86_64/shim-opensuse.efi", "/target/dir/usr/share/efi/x86_64/shim.efi")).To(Succeed())
 		Expect(tfs.Symlink("/target/dir/usr/share/grub2/x86_64-efi/grub.efi", "/target/dir/usr/share/efi/x86_64/grub.efi")).To(Succeed())
 
-		Expect(vfs.MkdirAll(tfs, "/target/dir", vfs.DirPerm)).To(Succeed())
+		// Setup /etc/os-release file with openSUSE tumbleweed ID
+		Expect(vfs.MkdirAll(tfs, "/target/dir/etc", vfs.DirPerm)).To(Succeed())
+		Expect(tfs.WriteFile("/target/dir/etc/os-release", []byte("ID=opensuse-tumbleweed"), vfs.FilePerm)).To(Succeed())
+		// Setup kernel dirs
+		Expect(vfs.MkdirAll(tfs, "/target/dir/usr/lib/modules/6.14.4-1-default", vfs.DirPerm)).To(Succeed())
+		Expect(tfs.WriteFile("/target/dir/usr/lib/modules/6.14.4-1-default/vmlinuz", []byte("6.14.4-1-default vmlinux.xz"), vfs.FilePerm)).To(Succeed())
 	})
 	AfterEach(func() {
 		cleanup()
@@ -83,7 +120,7 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 		err := grub.Install("/target/dir", esp)
 		Expect(err).ToNot(HaveOccurred())
 
-		// shim should not be a symlink
+		// shim must not be a symlink
 		file, err := tfs.Lstat("/target/dir/boot/efi/EFI/ELEMENTAL/shim.efi")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(file.Mode() & fs.ModeSymlink).To(Equal(fs.FileMode(0)))
@@ -92,5 +129,9 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/EFI/ELEMENTAL/shim.efi")).To(BeTrue())
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/EFI/ELEMENTAL/MokManager.efi")).To(BeTrue())
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/EFI/ELEMENTAL/grub.efi")).To(BeTrue())
+
+		// Kernel and initrd exists
+		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/opensuse-tumbleweed/6.14.4-1-default/vmlinuz")).To(BeTrue())
+		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/opensuse-tumbleweed/6.14.4-1-default/initrd")).To(BeTrue())
 	})
 })

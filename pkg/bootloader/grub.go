@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/suse/elemental/v3/pkg/chroot"
 	"github.com/suse/elemental/v3/pkg/deployment"
 	"github.com/suse/elemental/v3/pkg/sys"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
@@ -34,6 +35,10 @@ type Grub struct {
 func NewGrub(s *sys.System) *Grub {
 	return &Grub{s}
 }
+
+const (
+	OsReleasePath = "/etc/os-release"
+)
 
 // Install installs the bootloader to the specified root.
 func (g *Grub) Install(rootPath string, esp *deployment.Partition) error {
@@ -55,7 +60,12 @@ func (g *Grub) Install(rootPath string, esp *deployment.Partition) error {
 		return err
 	}
 
-	// CopyKernelInitrd()
+	err = g.installKernelInitrd(rootPath, esp)
+	if err != nil {
+		g.s.Logger().Error("Error installing kernel+initrd: %s", err.Error())
+		return err
+	}
+
 	// UpdateBootEntries()
 	return nil
 }
@@ -82,4 +92,53 @@ func (g *Grub) installElementalEFI(rootPath string, esp *deployment.Partition) e
 	}
 
 	return nil
+}
+
+func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) error {
+	g.s.Logger().Info("Installing kernel/initrd")
+
+	osVars, err := vfs.LoadEnvFile(g.s.FS(), filepath.Join(rootPath, OsReleasePath))
+	if err != nil {
+		g.s.Logger().Info("Error loading %s vars: %s", OsReleasePath, err.Error())
+		return err
+	}
+
+	var (
+		osId string
+		ok   bool
+	)
+	if osId, ok = osVars["ID"]; !ok {
+		g.s.Logger().Error("Error /etc/os-release ID var not set.")
+		return fmt.Errorf("/etc/os-release ID not set")
+	}
+
+	kernel, kernelVersion, err := vfs.FindKernel(g.s.FS(), rootPath)
+	if err != nil {
+		g.s.Logger().Info("Error loading finding kernel: %s", err.Error())
+		return err
+	}
+
+	targetDir := filepath.Join(rootPath, esp.MountPoint, osId, kernelVersion)
+
+	err = vfs.MkdirAll(g.s.FS(), targetDir, vfs.DirPerm)
+	if err != nil {
+		g.s.Logger().Info("Error creating kernel dir '%s': %s", targetDir, err.Error())
+		return err
+	}
+
+	err = vfs.CopyFile(g.s.FS(), kernel, targetDir)
+	if err != nil {
+		g.s.Logger().Info("Error copying kernel '%s': %s", targetDir, err.Error())
+		return err
+	}
+
+	// chroot into rootPath to use glibc/dracut of the image, since otherwise we could get linker errors if glibc version is not matching between live system and installed system.
+	return chroot.ChrootedCallback(g.s, rootPath, nil, func() error {
+		stdOut, err := g.s.Runner().Run("dracut", "--force", "--no-hostonly", filepath.Join(esp.MountPoint, osId, kernelVersion, "initrd"), kernelVersion)
+		g.s.Logger().Debug("Dracut stdout: %s", string(stdOut))
+		if err != nil {
+			g.s.Logger().Error("Error regenerating initrd: %s", err.Error())
+		}
+		return nil
+	})
 }
