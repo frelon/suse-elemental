@@ -73,6 +73,10 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 				_, err := tfs.Create(filepath.Join("/target/dir", initrdPath))
 				Expect(err).NotTo(HaveOccurred())
 				return nil, nil
+			case "grub2-editenv":
+				_, err := tfs.Create(args[0])
+				Expect(err).NotTo(HaveOccurred())
+				return nil, nil
 			}
 
 			return nil, fmt.Errorf("command '%s', %w", command, errors.ErrUnsupported)
@@ -100,7 +104,7 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 
 		// Setup /etc/os-release file with openSUSE tumbleweed ID
 		Expect(vfs.MkdirAll(tfs, "/target/dir/etc", vfs.DirPerm)).To(Succeed())
-		Expect(tfs.WriteFile("/target/dir/etc/os-release", []byte("ID=opensuse-tumbleweed"), vfs.FilePerm)).To(Succeed())
+		Expect(tfs.WriteFile("/target/dir/etc/os-release", []byte("ID=opensuse-tumbleweed\nNAME=openSUSE Tumbleweed"), vfs.FilePerm)).To(Succeed())
 		// Setup kernel dirs
 		Expect(vfs.MkdirAll(tfs, "/target/dir/usr/lib/modules/6.14.4-1-default", vfs.DirPerm)).To(Succeed())
 		Expect(tfs.WriteFile("/target/dir/usr/lib/modules/6.14.4-1-default/vmlinuz", []byte("6.14.4-1-default vmlinux.xz"), vfs.FilePerm)).To(Succeed())
@@ -130,8 +134,12 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/EFI/ELEMENTAL/MokManager.efi")).To(BeTrue())
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/EFI/ELEMENTAL/grub.efi")).To(BeTrue())
 
-		// Kernel and initrd exists
+		// Kernel and initrd exist
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/opensuse-tumbleweed/6.14.4-1-default/vmlinuz")).To(BeTrue())
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/opensuse-tumbleweed/6.14.4-1-default/initrd")).To(BeTrue())
+
+		// Grub env and loader entries files exist
+		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/grubenv")).To(BeTrue())
+		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/loader/entries/active")).To(BeTrue())
 	})
 })
