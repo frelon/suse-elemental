@@ -39,10 +39,10 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 	var s *sys.System
 	var cleanup func()
 	var grub *bootloader.Grub
-	var esp *deployment.Partition
 	var runner *sysmock.Runner
 	var syscall *sysmock.Syscall
 	var mounter *sysmock.Mounter
+	var d *deployment.Deployment
 	BeforeEach(func() {
 		var err error
 		tfs, cleanup, err = sysmock.TestFS(map[string]any{
@@ -84,9 +84,22 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 			return nil, fmt.Errorf("command '%s', %w", command, errors.ErrUnsupported)
 		}
 
-		esp = &deployment.Partition{
+		esp := &deployment.Partition{
 			Role:       deployment.EFI,
 			MountPoint: "/boot/efi",
+		}
+
+		sysPart := &deployment.Partition{
+			Role:       deployment.System,
+			MountPoint: "/",
+		}
+
+		d = &deployment.Deployment{
+			Disks: []*deployment.Disk{
+				{
+					Partitions: deployment.Partitions{esp, sysPart},
+				},
+			},
 		}
 
 		grub = bootloader.NewGrub(s)
@@ -114,16 +127,21 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 	AfterEach(func() {
 		cleanup()
 	})
-	It("Fails installing bootloader to System partition", func() {
+	It("Fails installing bootloader to deployment without ESP", func() {
 		sysPart := &deployment.Partition{
 			Role: deployment.System,
 		}
-		err := grub.Install("/target/dir", sysPart)
+		broken := &deployment.Deployment{
+			Disks: []*deployment.Disk{{
+				Partitions: deployment.Partitions{sysPart},
+			}},
+		}
+		err := grub.Install("/target/dir", broken)
 		Expect(err).To(HaveOccurred())
-		Expect(errors.Is(err, errors.ErrUnsupported)).To(BeTrue())
+		Expect(err.Error()).To(Equal("ESP not found"))
 	})
 	It("Copies EFI applications to ESP", func() {
-		err := grub.Install("/target/dir", esp)
+		err := grub.Install("/target/dir", d)
 		Expect(err).ToNot(HaveOccurred())
 
 		// shim must not be a symlink

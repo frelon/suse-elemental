@@ -192,7 +192,8 @@ type Disk struct {
 }
 
 type BootConfig struct {
-	Bootloader string `json:"name"`
+	Bootloader    string `json:"name"`
+	KernelCmdline string `json:"kernelCmdline"`
 }
 
 // MarshalJSON on disks omits the device name as this is a runtime information
@@ -373,7 +374,8 @@ func DefaultDeployment() *Deployment {
 		}},
 		Firmware: &FirmwareConfig{},
 		BootConfig: &BootConfig{
-			Bootloader: "none",
+			Bootloader:    "none",
+			KernelCmdline: fmt.Sprintf("root=LABEL=%s rw", SystemLabel),
 		},
 	}
 }

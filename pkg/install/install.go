@@ -122,7 +122,7 @@ func (i Installer) Install(d *deployment.Deployment) (err error) {
 		return err
 	}
 
-	err = i.b.Install(trans.Path, d.GetEfiSystemPartition())
+	err = i.b.Install(trans.Path, d)
 	if err != nil {
 		i.s.Logger().Error("installation failed, could not install bootloader: %s", err.Error())
 		return err
