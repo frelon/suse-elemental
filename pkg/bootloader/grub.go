@@ -178,18 +178,29 @@ func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (
 		return grubBootEntry{}, err
 	}
 
-	initrdPath := filepath.Join(esp.MountPoint, osID, kernelVersion, Initrd)
-	// chroot into rootPath to use glibc/dracut of the image, since otherwise we could get linker errors if glibc version is not matching between live system and installed system.
-	err = chroot.ChrootedCallback(g.s, rootPath, nil, func() error {
-		stdOut, err := g.s.Runner().Run("dracut", "--force", "--no-hostonly", initrdPath, kernelVersion)
-		g.s.Logger().Debug("Dracut stdout: %s", string(stdOut))
+	expectedInitrdPath := filepath.Join(filepath.Dir(kernel), Initrd)
+	if exists, _ := vfs.Exists(g.s.FS(), expectedInitrdPath); exists {
+		// Initrd exists, copy it.
+		err = vfs.CopyFile(g.s.FS(), expectedInitrdPath, targetDir)
 		if err != nil {
-			g.s.Logger().Error("Error generating initrd: %s", err.Error())
+			g.s.Logger().Info("Error copying initrd '%s': %s", targetDir, err.Error())
+			return grubBootEntry{}, err
 		}
-		return nil
-	})
-	if err != nil {
-		return grubBootEntry{}, err
+	} else {
+		// Initrd does not exist, generate a new one
+		initrdPath := filepath.Join(esp.MountPoint, osID, kernelVersion, Initrd)
+		// chroot into rootPath to use glibc/dracut of the image, since otherwise we could get linker errors if glibc version is not matching between live system and installed system.
+		err = chroot.ChrootedCallback(g.s, rootPath, nil, func() error {
+			stdOut, err := g.s.Runner().Run("dracut", "--force", "--no-hostonly", initrdPath, kernelVersion)
+			g.s.Logger().Debug("Dracut stdout: %s", string(stdOut))
+			if err != nil {
+				g.s.Logger().Error("Error generating initrd: %s", err.Error())
+			}
+			return nil
+		})
+		if err != nil {
+			return grubBootEntry{}, err
+		}
 	}
 
 	displayName, ok := osVars["PRETTY_NAME"]
