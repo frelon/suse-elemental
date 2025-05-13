@@ -47,13 +47,13 @@ func NewGrub(s *sys.System) *Grub {
 }
 
 const (
-	OsReleasePath  = "/etc/os-release"
-	DefaultCmdline = "rw quiet"
-	Initrd         = "initrd"
+	OsReleasePath = "/etc/os-release"
+	Initrd        = "initrd"
 )
 
 // Install installs the bootloader to the specified root.
-func (g *Grub) Install(rootPath string, esp *deployment.Partition) error {
+func (g *Grub) Install(rootPath string, d *deployment.Deployment) error {
+	esp := d.GetEfiSystemPartition()
 	if esp == nil {
 		g.s.Logger().Error("ESP not found")
 		return fmt.Errorf("ESP not found")
@@ -81,6 +81,10 @@ func (g *Grub) Install(rootPath string, esp *deployment.Partition) error {
 	entry, err := g.installKernelInitrd(rootPath, esp)
 	if err != nil {
 		g.s.Logger().Error("Error installing kernel+initrd: %s", err.Error())
+	}
+
+	if d.BootConfig != nil {
+		entry.cmdline = d.BootConfig.KernelCmdline
 	}
 
 	return g.updateBootEntries(rootPath, esp, entry)
@@ -197,7 +201,6 @@ func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (
 		linux:       filepath.Join("/", osID, kernelVersion, filepath.Base(kernel)),
 		initrd:      filepath.Join("/", osID, kernelVersion, Initrd),
 		displayName: displayName,
-		cmdline:     DefaultCmdline,
 		id:          "active",
 	}, nil
 }

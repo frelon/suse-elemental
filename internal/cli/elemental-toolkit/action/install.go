@@ -129,6 +129,10 @@ func digestInstallSetup(s *sys.System, flags *cmd.InstallFlags) (*deployment.Dep
 		d.BootConfig.Bootloader = flags.Bootloader
 	}
 
+	if flags.KernelCmdline != "" {
+		d.BootConfig.KernelCmdline = flags.KernelCmdline
+	}
+
 	err := d.Sanitize(s)
 	if err != nil {
 		return nil, fmt.Errorf("inconsistent deployment setup found: %w", err)

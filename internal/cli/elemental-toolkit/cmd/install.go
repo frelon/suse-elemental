@@ -31,6 +31,7 @@ type InstallFlags struct {
 	Overlay              string
 	CreateBootEntry      bool
 	Bootloader           string
+	KernelCmdline        string
 }
 
 var InstallArgs InstallFlags
@@ -80,6 +81,12 @@ func NewInstallCommand(appName string, action func(*cli.Context) error) *cli.Com
 				Value:       "none",
 				Usage:       "Bundled bootloader to install to ESP",
 				Destination: &InstallArgs.Bootloader,
+			},
+			&cli.StringFlag{
+				Name:        "cmdline",
+				Value:       "",
+				Usage:       "Kernel cmdline for installed system",
+				Destination: &InstallArgs.KernelCmdline,
 			},
 		},
 	}
