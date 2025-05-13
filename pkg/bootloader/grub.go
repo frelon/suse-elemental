@@ -25,6 +25,7 @@ import (
 
 	"github.com/suse/elemental/v3/pkg/chroot"
 	"github.com/suse/elemental/v3/pkg/deployment"
+	"github.com/suse/elemental/v3/pkg/rsync"
 	"github.com/suse/elemental/v3/pkg/sys"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
 )
@@ -48,6 +49,7 @@ func NewGrub(s *sys.System) *Grub {
 const (
 	OsReleasePath  = "/etc/os-release"
 	DefaultCmdline = "rw quiet"
+	Initrd         = "initrd"
 )
 
 // Install installs the bootloader to the specified root.
@@ -67,6 +69,12 @@ func (g *Grub) Install(rootPath string, esp *deployment.Partition) error {
 	err := g.installElementalEFI(rootPath, esp)
 	if err != nil {
 		g.s.Logger().Error("Error installing elemental EFI app: %s", err.Error())
+		return err
+	}
+
+	err = g.installGrub(rootPath, esp)
+	if err != nil {
+		g.s.Logger().Error("Error installing grub config: %s", err.Error())
 		return err
 	}
 
@@ -112,6 +120,22 @@ func (g *Grub) installElementalEFI(rootPath string, esp *deployment.Partition) e
 	return nil
 }
 
+// installGrub installs grub themes and configs to $ESP/grub2
+func (g *Grub) installGrub(rootPath string, esp *deployment.Partition) error {
+	g.s.Logger().Info("Syncing grub2 directory to ESP...")
+
+	// Since we are copying to a vfat filesystem we have to skip symlinks.
+	r := rsync.NewRsync(g.s, rsync.WithFlags("--archive", "--recursive", "--no-links"))
+
+	err := r.SyncData(filepath.Join(rootPath, "/usr/share/grub2"), filepath.Join(rootPath, esp.MountPoint, "grub2"))
+	if err != nil {
+		g.s.Logger().Error("Error syncing grub files: %s", err.Error())
+		return err
+	}
+
+	return nil
+}
+
 // installKernelInitrd copies the kernel to the ESP and generates an initrd using dracut.
 func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (grubBootEntry, error) {
 	g.s.Logger().Info("Installing kernel/initrd")
@@ -150,7 +174,7 @@ func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (
 		return grubBootEntry{}, err
 	}
 
-	initrdPath := filepath.Join(esp.MountPoint, osID, kernelVersion, "initrd")
+	initrdPath := filepath.Join(esp.MountPoint, osID, kernelVersion, Initrd)
 	// chroot into rootPath to use glibc/dracut of the image, since otherwise we could get linker errors if glibc version is not matching between live system and installed system.
 	err = chroot.ChrootedCallback(g.s, rootPath, nil, func() error {
 		stdOut, err := g.s.Runner().Run("dracut", "--force", "--no-hostonly", initrdPath, kernelVersion)
@@ -164,10 +188,15 @@ func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (
 		return grubBootEntry{}, err
 	}
 
+	displayName, ok := osVars["PRETTY_NAME"]
+	if !ok {
+		displayName = osVars["NAME"]
+	}
+
 	return grubBootEntry{
-		linux:       filepath.Join(esp.MountPoint, osID, kernelVersion, filepath.Base(kernel)),
-		initrd:      initrdPath,
-		displayName: osVars["NAME"],
+		linux:       filepath.Join("/", osID, kernelVersion, filepath.Base(kernel)),
+		initrd:      filepath.Join("/", osID, kernelVersion, Initrd),
+		displayName: displayName,
 		cmdline:     DefaultCmdline,
 		id:          "active",
 	}, nil
@@ -183,7 +212,7 @@ func (g *Grub) updateBootEntries(rootPath string, esp *deployment.Partition, ent
 	}
 
 	for _, entry := range entries {
-		displayName := fmt.Sprintf("displayName=%s", entry.displayName)
+		displayName := fmt.Sprintf("display_name=%s", entry.displayName)
 		linux := fmt.Sprintf("linux=%s", entry.linux)
 		initrd := fmt.Sprintf("initrd=%s", entry.initrd)
 		cmdline := fmt.Sprintf("cmdline=%s", entry.cmdline)

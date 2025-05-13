@@ -77,6 +77,8 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 				_, err := tfs.Create(args[0])
 				Expect(err).NotTo(HaveOccurred())
 				return nil, nil
+			case "rsync":
+				return nil, nil
 			}
 
 			return nil, fmt.Errorf("command '%s', %w", command, errors.ErrUnsupported)
