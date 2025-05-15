@@ -24,6 +24,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -309,7 +310,7 @@ func findFile(vfs FS, rootDir, pattern string) (string, error) {
 	return "", nil
 }
 
-func findFiles(vfs FS, rootDir, pattern string, fristMatchReturn bool) ([]string, error) {
+func findFiles(vfs FS, rootDir, pattern string, firstMatchReturn bool) ([]string, error) {
 	foundFiles := []string{}
 
 	base := filepath.Join(rootDir, getBaseDir(pattern))
@@ -328,7 +329,7 @@ func findFiles(vfs FS, rootDir, pattern string, fristMatchReturn bool) ([]string
 					return err
 				}
 				foundFiles = append(foundFiles, foundFile)
-				if fristMatchReturn {
+				if firstMatchReturn {
 					return io.EOF
 				}
 				return nil
@@ -620,9 +621,6 @@ func WriteEnvFile(fs FS, envs map[string]string, filename string) error {
 // Returns kernel file and version. It assumes kernel files match certain patterns
 func FindKernel(fs FS, rootDir string) (string, string, error) {
 	var kernel, version string
-	var err error
-
-	kernelModulesDir := "/usr/lib/modules"
 
 	kernelPatterns := []string{
 		"/usr/lib/modules/*/uImage*",
@@ -632,20 +630,29 @@ func FindKernel(fs FS, rootDir string) (string, string, error) {
 		"/usr/lib/modules/*/image*",
 	}
 
-	kernel, err = FindFile(fs, rootDir, kernelPatterns...)
-	if err != nil {
-		return "", "", fmt.Errorf("no Kernel file found: %w", err)
-	}
-	files, err := fs.ReadDir(filepath.Join(rootDir, kernelModulesDir))
-	if err != nil {
-		return "", "", fmt.Errorf("failed reading modules directory: %w", err)
-	}
-	for _, f := range files {
-		if strings.Contains(kernel, f.Name()) {
-			version = f.Name()
-			break
+	kernels := []string{}
+
+	for _, pattern := range kernelPatterns {
+		files, err := findFiles(fs, rootDir, pattern, false)
+		if err != nil {
+			return kernel, version, err
 		}
+
+		kernels = slices.Concat(kernels, files)
 	}
+
+	if len(kernels) == 0 {
+		return kernel, version, fmt.Errorf("no kernels found")
+	}
+
+	// Sort descending
+	sort.Slice(kernels, func(i, j int) bool {
+		return kernels[i] > kernels[j]
+	})
+
+	kernel = kernels[0]
+	version = filepath.Base(filepath.Dir(kernel))
+
 	if version == "" {
 		return "", "", fmt.Errorf("could not determine the version of kernel %s", kernel)
 	}
