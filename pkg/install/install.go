@@ -128,8 +128,6 @@ func (i Installer) Install(d *deployment.Deployment) (err error) {
 		return err
 	}
 
-	err = d.WriteDeploymentFile(i.s, trans.Path)
-
 	if d.OverlayTree != nil && !d.OverlayTree.IsEmpty() {
 		unpacker, err := unpack.NewUnpacker(i.s, d.OverlayTree)
 		if err != nil {
