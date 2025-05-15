@@ -122,12 +122,6 @@ func (i Installer) Install(d *deployment.Deployment) (err error) {
 		return err
 	}
 
-	err = i.b.Install(trans.Path, d)
-	if err != nil {
-		i.s.Logger().Error("installation failed, could not install bootloader: %s", err.Error())
-		return err
-	}
-
 	if d.OverlayTree != nil && !d.OverlayTree.IsEmpty() {
 		unpacker, err := unpack.NewUnpacker(i.s, d.OverlayTree)
 		if err != nil {
@@ -147,6 +141,12 @@ func (i Installer) Install(d *deployment.Deployment) (err error) {
 			i.s.Logger().Error("installation failed, configuration hook error")
 			return err
 		}
+	}
+
+	err = i.b.Install(trans.Path, d)
+	if err != nil {
+		i.s.Logger().Error("installation failed, could not install bootloader: %s", err.Error())
+		return err
 	}
 
 	err = i.t.Commit(trans)
