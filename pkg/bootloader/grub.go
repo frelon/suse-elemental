@@ -180,7 +180,7 @@ func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (
 
 	expectedInitrdPath := filepath.Join(filepath.Dir(kernel), Initrd)
 	if exists, _ := vfs.Exists(g.s.FS(), expectedInitrdPath); !exists {
-		return grubBootEntry{}, fmt.Errorf("Initrd not found")
+		return grubBootEntry{}, fmt.Errorf("initrd not found")
 	}
 
 	err = vfs.CopyFile(g.s.FS(), expectedInitrdPath, targetDir)
