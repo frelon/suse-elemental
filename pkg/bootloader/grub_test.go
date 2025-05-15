@@ -67,7 +67,6 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 
 		runner.SideEffect = func(command string, args ...string) ([]byte, error) {
 			switch filepath.Base(command) {
-			// create the initrd specified in the second-to-last argument. (inside /target/dir, since the real code chroots into the install target
 			case "grub2-editenv":
 				_, err := tfs.Create(args[0])
 				Expect(err).NotTo(HaveOccurred())
@@ -158,28 +157,12 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/grubenv")).To(BeTrue())
 		Expect(vfs.Exists(tfs, "/target/dir/boot/efi/loader/entries/active")).To(BeTrue())
 	})
-	It("Generates an initrd using dracut if it does not exist", func() {
+	It("Fails with an error if initrd is not found", func() {
 		// Remove initrd
 		err := tfs.Remove("/target/dir/usr/lib/modules/6.14.4-1-default/initrd")
 		Expect(err).ToNot(HaveOccurred())
 
-		dracutRun := false
-		runner.SideEffect = func(command string, args ...string) ([]byte, error) {
-			switch filepath.Base(command) {
-			case "dracut":
-				dracutRun = true
-				return nil, nil
-			case "grub2-editenv":
-				return nil, nil
-			case "rsync":
-				return nil, nil
-			}
-
-			return nil, fmt.Errorf("command '%s', %w", command, errors.ErrUnsupported)
-		}
-
 		err = grub.Install("/target/dir", d)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(dracutRun).To(BeTrue())
+		Expect(err).To(HaveOccurred())
 	})
 })
