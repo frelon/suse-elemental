@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/suse/elemental/v3/pkg/chroot"
 	"github.com/suse/elemental/v3/pkg/deployment"
 	"github.com/suse/elemental/v3/pkg/rsync"
 	"github.com/suse/elemental/v3/pkg/sys"
@@ -81,6 +80,7 @@ func (g *Grub) Install(rootPath string, d *deployment.Deployment) error {
 	entry, err := g.installKernelInitrd(rootPath, esp)
 	if err != nil {
 		g.s.Logger().Error("Error installing kernel+initrd: %s", err.Error())
+		return err
 	}
 
 	if d.BootConfig != nil {
@@ -179,28 +179,14 @@ func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (
 	}
 
 	expectedInitrdPath := filepath.Join(filepath.Dir(kernel), Initrd)
-	if exists, _ := vfs.Exists(g.s.FS(), expectedInitrdPath); exists {
-		// Initrd exists, copy it.
-		err = vfs.CopyFile(g.s.FS(), expectedInitrdPath, targetDir)
-		if err != nil {
-			g.s.Logger().Info("Error copying initrd '%s': %s", targetDir, err.Error())
-			return grubBootEntry{}, err
-		}
-	} else {
-		// Initrd does not exist, generate a new one
-		initrdPath := filepath.Join(esp.MountPoint, osID, kernelVersion, Initrd)
-		// chroot into rootPath to use glibc/dracut of the image, since otherwise we could get linker errors if glibc version is not matching between live system and installed system.
-		err = chroot.ChrootedCallback(g.s, rootPath, nil, func() error {
-			stdOut, err := g.s.Runner().Run("dracut", "--force", "--no-hostonly", initrdPath, kernelVersion)
-			g.s.Logger().Debug("Dracut stdout: %s", string(stdOut))
-			if err != nil {
-				g.s.Logger().Error("Error generating initrd: %s", err.Error())
-			}
-			return nil
-		})
-		if err != nil {
-			return grubBootEntry{}, err
-		}
+	if exists, _ := vfs.Exists(g.s.FS(), expectedInitrdPath); !exists {
+		return grubBootEntry{}, fmt.Errorf("Initrd not found")
+	}
+
+	err = vfs.CopyFile(g.s.FS(), expectedInitrdPath, targetDir)
+	if err != nil {
+		g.s.Logger().Info("Error copying initrd '%s': %s", targetDir, err.Error())
+		return grubBootEntry{}, err
 	}
 
 	displayName, ok := osVars["PRETTY_NAME"]
