@@ -125,7 +125,7 @@ func digestInstallSetup(s *sys.System, flags *cmd.InstallFlags) (*deployment.Dep
 		}
 	}
 
-	if flags.Bootloader != "none" {
+	if flags.Bootloader != bootloader.BootNone {
 		d.BootConfig.Bootloader = flags.Bootloader
 	}
 
