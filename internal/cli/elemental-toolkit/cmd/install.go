@@ -78,7 +78,7 @@ func NewInstallCommand(appName string, action func(*cli.Context) error) *cli.Com
 			&cli.StringFlag{
 				Name:        "bootloader",
 				Aliases:     []string{"b"},
-				Value:       "none",
+				Value:       "grub",
 				Usage:       "Bundled bootloader to install to ESP",
 				Destination: &InstallArgs.Bootloader,
 			},
