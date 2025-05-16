@@ -274,8 +274,8 @@ func (sn *snapperT) probe(d deployment.Deployment) (err error) {
 	if sysPart == nil {
 		return fmt.Errorf("no system partition defined in deployment")
 	}
-	part := sn.hwPartitions.GetByUUIDNameOrLabel(sysPart.UUID, sysPart.Role.String(), sysPart.Label)
-	if part == nil {
+	part, err := block.GetPartitionByUUID(sn.s, blockDev, sysPart.UUID, 4)
+	if part == nil || err != nil {
 		return fmt.Errorf("system partition not found: %+v", sysPart)
 	}
 	mnts, err := sn.s.Mounter().GetMountPoints(part.Path)
@@ -394,14 +394,20 @@ func (sn snapperT) syncSnapshotDeleteExcludes() []string {
 // mountPartition mounts the given partition to the given mount point. In addition it also
 // sets the umount cleanup task.
 func (sn snapperT) mountPartition(part *deployment.Partition, mountPoint string) error {
+	blockDev := lsblk.NewLsDevice(sn.s)
+
 	err := vfs.MkdirAll(sn.s.FS(), mountPoint, vfs.DirPerm)
 	if err != nil {
 		sn.s.Logger().Error("failed creating partition mountpoint path '%s'", mountPoint)
 		return err
 	}
-	bPart := sn.hwPartitions.GetByUUID(part.UUID)
-	if bPart == nil {
-		sn.s.Logger().Error("failed to find partition '%s'", part.UUID)
+	bPart, err := block.GetPartitionByUUID(sn.s, blockDev, part.UUID, 4)
+	if bPart == nil || err != nil {
+		if err != nil {
+			sn.s.Logger().Error("failed to find partition '%s': %s", part.UUID, err.Error())
+		} else {
+			sn.s.Logger().Error("failed to find partition '%s'", part.UUID)
+		}
 		return fmt.Errorf("partition not found")
 	}
 	err = sn.s.Mounter().Mount(bPart.Path, mountPoint, "", []string{"rw"})
@@ -434,12 +440,13 @@ func (sn snapperT) mountPartitionToTempDir(part *deployment.Partition) (string, 
 // mountVol mounts the given volume from the given partition. In addition it also sets
 // the umount cleanup task.
 func (sn snapperT) mountVol(part *deployment.Partition, volumePath, mountPoint string) error {
-	bPart := sn.hwPartitions.GetByUUID(part.UUID)
-	if bPart == nil {
+	blockDev := lsblk.NewLsDevice(sn.s)
+	bPart, err := block.GetPartitionByUUID(sn.s, blockDev, part.UUID, 4)
+	if bPart == nil || err != nil {
 		sn.s.Logger().Error("failed to find partition '%s'", part.UUID)
 		return fmt.Errorf("partition not found")
 	}
-	err := vfs.MkdirAll(sn.s.FS(), mountPoint, vfs.DirPerm)
+	err = vfs.MkdirAll(sn.s.FS(), mountPoint, vfs.DirPerm)
 	if err != nil {
 		sn.s.Logger().Error("failed to create mountpoint", mountPoint)
 		return err
