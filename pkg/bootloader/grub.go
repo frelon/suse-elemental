@@ -191,7 +191,10 @@ func (g *Grub) installKernelInitrd(rootPath string, esp *deployment.Partition) (
 
 	displayName, ok := osVars["PRETTY_NAME"]
 	if !ok {
-		displayName = osVars["NAME"]
+		displayName, ok = osVars["VARIANT"]
+		if !ok {
+			displayName = osVars["NAME"]
+		}
 	}
 
 	return grubBootEntry{
