@@ -31,7 +31,7 @@ import (
 	"github.com/suse/elemental/v3/pkg/unpack"
 )
 
-func (sc snapperContext) SyncImageContent(imgSrc *deployment.ImageSource, trans *Transaction, fullSync bool) (err error) {
+func (sc snapperContext) SyncImageContent(imgSrc *deployment.ImageSource, trans *Transaction) (err error) {
 	defer func() { err = sc.checkCancelled(err) }()
 	if trans.status != started {
 		return fmt.Errorf("given transaction '%d' is not started", trans.ID)
@@ -44,7 +44,8 @@ func (sc snapperContext) SyncImageContent(imgSrc *deployment.ImageSource, trans 
 		sc.s.Logger().Error("failed initatin image unpacker")
 		return err
 	}
-	digest, err := unpacker.SynchedUnpack(sc.ctx, trans.Path, sc.syncSnapshotExcludes(fullSync), sc.syncSnapshotDeleteExcludes())
+	// The very first transaction requires full synchronization (e.g. /var, /etc, etc.). First transaction ID is 1
+	digest, err := unpacker.SynchedUnpack(sc.ctx, trans.Path, sc.syncSnapshotExcludes(trans.ID == 1), sc.syncSnapshotDeleteExcludes())
 	if err != nil {
 		sc.s.Logger().Error("failed unpacking image to '%s'", trans.Path)
 		return err

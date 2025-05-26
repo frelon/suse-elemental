@@ -102,7 +102,7 @@ func (u Upgrader) Upgrade(d *deployment.Deployment) (err error) {
 	}
 	cleanup.PushErrorOnly(func() error { return u.t.Rollback(trans, err) })
 
-	err = uh.SyncImageContent(d.SourceOS, trans, true)
+	err = uh.SyncImageContent(d.SourceOS, trans)
 	if err != nil {
 		u.s.Logger().Error("could not dump OS image")
 		return err

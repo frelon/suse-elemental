@@ -40,7 +40,7 @@ type UpgradeHelper struct {
 	srcDigest  string
 }
 
-func (u UpgradeHelper) SyncImageContent(imgSrc *deployment.ImageSource, _ *transaction.Transaction, _ bool) error {
+func (u UpgradeHelper) SyncImageContent(imgSrc *deployment.ImageSource, _ *transaction.Transaction) error {
 	imgSrc.SetDigest(u.srcDigest)
 	return u.SyncError
 }

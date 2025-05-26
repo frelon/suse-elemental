@@ -53,7 +53,7 @@ type Interface interface {
 }
 
 type UpgradeHelper interface {
-	SyncImageContent(*deployment.ImageSource, *Transaction, bool) error
+	SyncImageContent(*deployment.ImageSource, *Transaction) error
 	Merge(*Transaction) error
 	UpdateFstab(*Transaction) error
 	Lock(*Transaction) error

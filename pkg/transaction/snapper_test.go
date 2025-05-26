@@ -318,7 +318,7 @@ var _ = Describe("SnapperTransaction", Label("transaction"), func() {
 			})
 			Describe("transaction helper", func() {
 				It("Syncs the source image", func() {
-					Expect(upgradeH.SyncImageContent(imgsrc, trans, true)).To(Succeed())
+					Expect(upgradeH.SyncImageContent(imgsrc, trans)).To(Succeed())
 					Expect(runner.CmdsMatch([][]string{
 						{"rsync", "--info=progress2", "--human-readable"},
 					})).To(Succeed())
@@ -327,7 +327,7 @@ var _ = Describe("SnapperTransaction", Label("transaction"), func() {
 					sideEffects["rsync"] = func(args ...string) ([]byte, error) {
 						return []byte{}, fmt.Errorf("rsync error")
 					}
-					Expect(upgradeH.SyncImageContent(imgsrc, trans, true)).NotTo(Succeed())
+					Expect(upgradeH.SyncImageContent(imgsrc, trans)).NotTo(Succeed())
 					Expect(runner.CmdsMatch([][]string{
 						{"rsync", "--info=progress2", "--human-readable"},
 					})).To(Succeed())
