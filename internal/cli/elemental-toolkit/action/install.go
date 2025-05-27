@@ -61,8 +61,14 @@ func Install(ctx *cli.Context) error { //nolint:dupl
 		stop()
 	}()
 
+	bootloader, err := bootloader.New(d.BootConfig.Bootloader, s)
+	if err != nil {
+		s.Logger().Error("installation failed: %v", err)
+		return err
+	}
+
 	manager := firmware.NewEfiBootManager(s)
-	upgrader := upgrade.New(ctxCancel, s, upgrade.WithBootManager(manager))
+	upgrader := upgrade.New(ctxCancel, s, upgrade.WithBootManager(manager), upgrade.WithBootloader(bootloader))
 	installer := install.New(ctxCancel, s, install.WithUpgrader(upgrader))
 
 	err = installer.Install(d)
