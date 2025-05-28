@@ -91,13 +91,13 @@ func (u Upgrader) Upgrade(d *deployment.Deployment) (err error) {
 
 	uh, err = u.t.Init(*d)
 	if err != nil {
-		u.s.Logger().Error("could not initialize snapper")
+		u.s.Logger().Error("could not initialize transaction")
 		return err
 	}
 
 	trans, err := u.t.Start()
 	if err != nil {
-		u.s.Logger().Error("could not start snapper transaction")
+		u.s.Logger().Error("could not start transaction")
 		return err
 	}
 	cleanup.PushErrorOnly(func() error { return u.t.Rollback(trans, err) })
@@ -134,7 +134,7 @@ func (u Upgrader) Upgrade(d *deployment.Deployment) (err error) {
 
 	err = uh.Lock(trans)
 	if err != nil {
-		u.s.Logger().Error("failed relabelling snapshot path: %s", trans.Path)
+		u.s.Logger().Error("failed locking snapshot: %s", trans.Path)
 		return err
 	}
 
@@ -184,13 +184,13 @@ func (u Upgrader) configHook(config string, root string) error {
 		defer func() {
 			logOutput(u.s, *stdOut, *stdErr)
 		}()
-		return u.s.Runner().RunContextParseOutput(u.ctx, stdHander(stdOut), stdHander(stdErr), rootedConfig)
+		return u.s.Runner().RunContextParseOutput(u.ctx, stdHandler(stdOut), stdHandler(stdErr), rootedConfig)
 	}
 	binds := map[string]string{config: rootedConfig}
 	return chroot.ChrootedCallback(u.s, root, binds, callback)
 }
 
-func stdHander(out *string) func(string) {
+func stdHandler(out *string) func(string) {
 	return func(line string) {
 		*out += line + "\n"
 	}

@@ -49,17 +49,12 @@ type snapperContext struct {
 	maxSnapshots int
 }
 
-// checkCancelled just checks if the current context is cancelled or not. Returns the context error if cancelled.
+// checkCancelled returns the given error if not nil, otherwise it returns the context error if any.
 func (sc snapperContext) checkCancelled(err error) error {
 	if err != nil {
 		return err
 	}
-	select {
-	case <-sc.ctx.Done():
-		return sc.ctx.Err()
-	default:
-		return nil
-	}
+	return sc.ctx.Err()
 }
 
 type snapperT struct {
