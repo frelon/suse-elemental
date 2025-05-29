@@ -223,7 +223,7 @@ type Deployment struct {
 
 // MarshalJSON on deploy omits the overlay tree and the configuration script
 // as these are install|ugrade time information which is no longer guaranteed
-// to be (re)aplicable on a deployed system as those are not kept aside.
+// to be (re)applicable on a deployed system as those are not kept aside.
 func (d Deployment) MarshalJSON() ([]byte, error) {
 	type deployAlias Deployment
 	deploy := deployAlias(d)
