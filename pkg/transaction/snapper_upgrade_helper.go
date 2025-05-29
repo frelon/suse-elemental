@@ -31,6 +31,9 @@ import (
 	"github.com/suse/elemental/v3/pkg/unpack"
 )
 
+// SyncImageContent syncs the given image tree to given transaction. For the first transaction all content
+// is synced regardless if some paths are under a persistent path or not. On upgrades it only syncs the immutable
+// content and snapshotted paths.
 func (sc snapperContext) SyncImageContent(imgSrc *deployment.ImageSource, trans *Transaction) (err error) {
 	defer func() { err = sc.checkCancelled(err) }()
 	if trans.status != started {
@@ -55,6 +58,7 @@ func (sc snapperContext) SyncImageContent(imgSrc *deployment.ImageSource, trans 
 	return nil
 }
 
+// Merge performs a three way merge of snapshotted customizable paths
 func (sc snapperContext) Merge(trans *Transaction) (err error) {
 	defer func() { err = sc.checkCancelled(err) }()
 	if trans.status != started {
@@ -76,6 +80,7 @@ func (sc snapperContext) Merge(trans *Transaction) (err error) {
 	return err
 }
 
+// UpdateFstab updates fstab file including the new snapshots
 func (sc snapperContext) UpdateFstab(trans *Transaction) (err error) {
 	defer func() { err = sc.checkCancelled(err) }()
 	if trans.status != started {
@@ -99,6 +104,7 @@ func (sc snapperContext) UpdateFstab(trans *Transaction) (err error) {
 	return err
 }
 
+// Lock sets the main transaction snapshot to readonly mode
 func (sc snapperContext) Lock(trans *Transaction) (err error) {
 	defer func() { err = sc.checkCancelled(err) }()
 	if trans.status != started {
