@@ -19,7 +19,6 @@ package upgrade
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/suse/elemental/v3/pkg/bootloader"
 	"github.com/suse/elemental/v3/pkg/chroot"
@@ -32,7 +31,7 @@ import (
 	"github.com/suse/elemental/v3/pkg/unpack"
 )
 
-const configFile = "config.sh"
+const configFile = "/etc/elemental/config.sh"
 
 type Interface interface {
 	Upgrade(*deployment.Deployment) error
@@ -176,7 +175,6 @@ func (u Upgrader) Upgrade(d *deployment.Deployment) (err error) {
 
 func (u Upgrader) configHook(config string, root string) error {
 	u.s.Logger().Info("Running transaction hook")
-	rootedConfig := filepath.Join("/etc/elemental", configFile)
 	callback := func() error {
 		var stdOut, stdErr *string
 		stdOut = new(string)
@@ -184,9 +182,9 @@ func (u Upgrader) configHook(config string, root string) error {
 		defer func() {
 			logOutput(u.s, *stdOut, *stdErr)
 		}()
-		return u.s.Runner().RunContextParseOutput(u.ctx, stdHandler(stdOut), stdHandler(stdErr), rootedConfig)
+		return u.s.Runner().RunContextParseOutput(u.ctx, stdHandler(stdOut), stdHandler(stdErr), configFile)
 	}
-	binds := map[string]string{config: rootedConfig}
+	binds := map[string]string{config: configFile}
 	return chroot.ChrootedCallback(u.s, root, binds, callback)
 }
 
