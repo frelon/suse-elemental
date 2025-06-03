@@ -25,6 +25,8 @@ import (
 
 type UpgradeFlags struct {
 	OperatingSystemImage string
+	ConfigScript         string
+	Overlay              string
 }
 
 var UpgradeArgs UpgradeFlags
@@ -41,6 +43,16 @@ func NewUpgradeCommand(appName string, action func(*cli.Context) error) *cli.Com
 				Usage:       "image containing the operating system",
 				Destination: &UpgradeArgs.OperatingSystemImage,
 				Required:    true,
+			},
+			&cli.StringFlag{
+				Name:        "config",
+				Usage:       "Configuration script path to execute after committing os-image",
+				Destination: &UpgradeArgs.ConfigScript,
+			},
+			&cli.StringFlag{
+				Name:        "overlay",
+				Usage:       "URI to the content overlaid over the OS image",
+				Destination: &UpgradeArgs.Overlay,
 			},
 		},
 	}
