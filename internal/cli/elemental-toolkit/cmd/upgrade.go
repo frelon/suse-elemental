@@ -40,18 +40,18 @@ func NewUpgradeCommand(appName string, action func(*cli.Context) error) *cli.Com
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "os-image",
-				Usage:       "image containing the operating system",
+				Usage:       "URI to the image containing the operating system",
 				Destination: &UpgradeArgs.OperatingSystemImage,
 				Required:    true,
 			},
 			&cli.StringFlag{
 				Name:        "config",
-				Usage:       "Configuration script path to execute after committing os-image",
+				Usage:       "Path to OS image post-commit script",
 				Destination: &UpgradeArgs.ConfigScript,
 			},
 			&cli.StringFlag{
 				Name:        "overlay",
-				Usage:       "URI to the content overlaid over the OS image",
+				Usage:       "URI of the overlay content for the OS image",
 				Destination: &UpgradeArgs.Overlay,
 			},
 		},
