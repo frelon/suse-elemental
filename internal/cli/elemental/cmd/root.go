@@ -21,6 +21,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/suse/elemental/v3/pkg/log"
+	"github.com/suse/elemental/v3/pkg/sys"
 )
 
 const Usage = "Build ready-to-use infrastructure platforms"
@@ -35,16 +36,19 @@ func GlobalFlags() []cli.Flag {
 }
 
 func Setup(ctx *cli.Context) error {
-	logger := log.New()
+	s, err := sys.NewSystem()
+	if err != nil {
+		return err
+	}
 
 	if ctx.Bool("debug") {
-		logger.SetLevel(log.DebugLevel())
+		s.Logger().SetLevel(log.DebugLevel())
 	}
 
 	if ctx.App.Metadata == nil {
 		ctx.App.Metadata = map[string]any{}
 	}
-	ctx.App.Metadata["logger"] = logger
+	ctx.App.Metadata["system"] = s
 
 	return nil
 }
