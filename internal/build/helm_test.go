@@ -119,20 +119,21 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			Expect(configs[1].Repositories).To(HaveLen(1))
 
 			chart = configs[1].Charts[0]
-			Expect(chart.Name).To(Equal("NeuVector"))
-			Expect(chart.Chart).To(Equal("neuvector"))
-			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
-			Expect(chart.Namespace).To(Equal("neuvector-system"))
-			Expect(chart.Repository).To(Equal("rancher-charts"))
-			Expect(chart.DependsOn).To(ConsistOf("neuvector-crd"))
-
-			chart = configs[1].Charts[1]
 			Expect(chart.Name).To(Equal("NeuVector CRD"))
 			Expect(chart.Chart).To(Equal("neuvector-crd"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
 			Expect(chart.Namespace).To(Equal("neuvector-system"))
 			Expect(chart.Repository).To(Equal("rancher-charts"))
 			Expect(chart.DependsOn).To(BeEmpty())
+
+			chart = configs[1].Charts[1]
+
+			Expect(chart.Name).To(Equal("NeuVector"))
+			Expect(chart.Chart).To(Equal("neuvector"))
+			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
+			Expect(chart.Namespace).To(Equal("neuvector-system"))
+			Expect(chart.Repository).To(Equal("rancher-charts"))
+			Expect(chart.DependsOn).To(ConsistOf("neuvector-crd"))
 
 			repository = configs[1].Repositories[0]
 			Expect(repository.Name).To(Equal("rancher-charts"))
@@ -253,19 +254,19 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			Expect(e.Repositories).To(HaveLen(1))
 
 			chart := e.Charts[0]
+			Expect(chart.Name).To(Equal("NeuVector CRD"))
+			Expect(chart.Chart).To(Equal("neuvector-crd"))
+			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
+			Expect(chart.Namespace).To(Equal("neuvector-system"))
+			Expect(chart.Repository).To(Equal("rancher-charts"))
+
+			chart = e.Charts[1]
 			Expect(chart.Name).To(Equal("NeuVector"))
 			Expect(chart.Chart).To(Equal("neuvector"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
 			Expect(chart.Namespace).To(Equal("neuvector-system"))
 			Expect(chart.Repository).To(Equal("rancher-charts"))
 			Expect(chart.DependsOn).To(ConsistOf("neuvector-crd"))
-
-			chart = e.Charts[1]
-			Expect(chart.Name).To(Equal("NeuVector CRD"))
-			Expect(chart.Chart).To(Equal("neuvector-crd"))
-			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
-			Expect(chart.Namespace).To(Equal("neuvector-system"))
-			Expect(chart.Repository).To(Equal("rancher-charts"))
 
 			repository := e.Repositories[0]
 			Expect(repository.Name).To(Equal("rancher-charts"))

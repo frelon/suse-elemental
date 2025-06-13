@@ -30,9 +30,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func needsHelmChartsSetup(k *image.Kubernetes, rm *resolver.ResolvedManifest) bool {
+func needsHelmChartsSetup(def *image.Definition, rm *resolver.ResolvedManifest) bool {
 	return (rm.CorePlatform != nil && rm.CorePlatform.Components.Helm != nil) ||
-		(rm.ProductExtension != nil && rm.ProductExtension.Components.Helm != nil) || k.Helm != nil
+		(rm.ProductExtension != nil && rm.ProductExtension.Components.Helm != nil && len(def.Release.Enable) != 0) ||
+		def.Kubernetes.Helm != nil
 }
 
 func setupHelmCharts(d *image.Definition, rm *resolver.ResolvedManifest, overlaysPath, relativeHelmPath string) (runtimeHelmCharts []string, err error) {
@@ -126,13 +127,15 @@ func enabledHelmCharts(helm *api.Helm, enabled []string) (*api.Helm, error) {
 			return nil
 		}
 
-		h.Charts = append(h.Charts, chart)
-
+		// Check for dependencies and add them first.
 		for _, d := range chart.DependsOn {
 			if err := addChart(d); err != nil {
 				return fmt.Errorf("adding dependent helm chart '%s': %w", d, err)
 			}
 		}
+
+		// Add the main chart.
+		h.Charts = append(h.Charts, chart)
 
 		return nil
 	}

@@ -60,13 +60,13 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, system *sys.
 		return err
 	}
 
-	if len(d.Release.Enable) != 0 {
-		logger.Info("Enabling the following product extensions: %s", strings.Join(d.Release.Enable, ", "))
-	}
-
 	var runtimeHelmCharts []string
 	relativeK8sPath := filepath.Join("var", "lib", "elemental", "kubernetes")
-	if needsHelmChartsSetup(&d.Kubernetes, m) {
+	if needsHelmChartsSetup(d, m) {
+		if len(d.Release.Enable) != 0 {
+			logger.Info("Enabling the following product extensions: %s", strings.Join(d.Release.Enable, ", "))
+		}
+
 		relativeHelmPath := filepath.Join(relativeK8sPath, "helm")
 		if runtimeHelmCharts, err = setupHelmCharts(d, m, overlaysPath, relativeHelmPath); err != nil {
 			logger.Error("Setting up Helm charts failed")
