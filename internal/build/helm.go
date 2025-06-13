@@ -19,12 +19,67 @@ package build
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 
+	"github.com/suse/elemental/v3/internal/helm"
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/pkg/manifest/api"
 	"github.com/suse/elemental/v3/pkg/manifest/resolver"
+	"gopkg.in/yaml.v3"
 )
+
+func needsHelmChartsSetup(k *image.Kubernetes, rm *resolver.ResolvedManifest) bool {
+	return (rm.CorePlatform != nil && rm.CorePlatform.Components.Helm != nil) ||
+		(rm.ProductExtension != nil && rm.ProductExtension.Components.Helm != nil) || k.Helm != nil
+}
+
+func setupHelmCharts(d *image.Definition, rm *resolver.ResolvedManifest, overlaysPath, relativeHelmPath string) (runtimeHelmCharts []string, err error) {
+	pathInOverlays := filepath.Join(overlaysPath, relativeHelmPath)
+	runtimePath := filepath.Join(string(os.PathSeparator), relativeHelmPath)
+
+	configs, err := getPrioritisedHelmConfigs(d, rm)
+	if err != nil {
+		return nil, fmt.Errorf("prioritizing helm charts: %w", err)
+	}
+
+	chartNames, err := writeHelmCharts(pathInOverlays, configs)
+	if err != nil {
+		return nil, fmt.Errorf("writing helm chart resources to %s: %w", pathInOverlays, err)
+	}
+
+	for _, chartName := range chartNames {
+		runtimeHelmCharts = append(runtimeHelmCharts, filepath.Join(runtimePath, chartName))
+	}
+
+	return runtimeHelmCharts, nil
+}
+
+func writeHelmCharts(dest string, configs []*api.Helm) (names []string, err error) {
+	if err = os.MkdirAll(dest, os.ModeDir); err != nil {
+		return nil, fmt.Errorf("setting up HelmChart destination directory '%s': %w", dest, err)
+	}
+
+	for _, config := range configs {
+		for _, helmCRD := range helm.ProduceCRDs(config) {
+			data, err := yaml.Marshal(helmCRD)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling helm chart: %w", err)
+			}
+
+			chartName := fmt.Sprintf("%s.yaml", helmCRD.Metadata.Name)
+			chartPath := filepath.Join(dest, chartName)
+			if err = os.WriteFile(chartPath, data, os.FileMode(0o644)); err != nil {
+				return nil, fmt.Errorf("writing helm chart: %w", err)
+			}
+
+			names = append(names, chartName)
+		}
+	}
+
+	return names, nil
+}
 
 func getPrioritisedHelmConfigs(def *image.Definition, rm *resolver.ResolvedManifest) ([]*api.Helm, error) {
 	var configs []*api.Helm
