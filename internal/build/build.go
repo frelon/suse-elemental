@@ -49,6 +49,7 @@ var configScriptTpl string
 //go:embed templates/k8s_res_deploy.sh.tpl
 var k8sResDeployScriptTpl string
 
+// nolint:gocyclo
 func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolver helmValuesResolver, system *sys.System) error {
 	logger := system.Logger()
 	runner := system.Runner()
