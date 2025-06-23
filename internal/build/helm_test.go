@@ -113,7 +113,17 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 
 		It("Fails resolving values of core Helm chart", func() {
 			resolver := &valuesResolverMock{Err: fmt.Errorf("resolving failed")}
-			definition := &image.Definition{}
+			definition := &image.Definition{
+				Release: release.Release{
+					Core: release.Components{
+						Helm: []release.HelmChart{
+							{
+								Name: "metallb",
+							},
+						},
+					},
+				},
+			}
 
 			charts, err := setupHelmCharts(nil, definition, rm, "", "", resolver)
 			Expect(err).To(HaveOccurred())
@@ -125,6 +135,13 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			resolver := &valuesResolverMock{Err: fmt.Errorf("resolving failed"), SuccessCount: 1}
 			definition := &image.Definition{
 				Release: release.Release{
+					Core: release.Components{
+						Helm: []release.HelmChart{
+							{
+								Name: "metallb",
+							},
+						},
+					},
 					Product: release.Components{
 						Helm: []release.HelmChart{
 							{
@@ -142,7 +159,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 		})
 
 		It("Fails resolving values of user Helm chart", func() {
-			resolver := &valuesResolverMock{Err: fmt.Errorf("resolving failed"), SuccessCount: 1}
+			resolver := &valuesResolverMock{Err: fmt.Errorf("resolving failed")}
 			definition := &image.Definition{
 				Kubernetes: kubernetes.Kubernetes{
 					Helm: &kubernetes.Helm{
@@ -192,6 +209,26 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			charts, err := setupHelmCharts(nil, definition, rm, "", "", resolver)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("retrieving helm charts: collecting user helm charts: repository not found for chart: apache"))
+			Expect(charts).To(BeNil())
+		})
+
+		It("Fails enabling a missing core chart", func() {
+			resolver := &valuesResolverMock{}
+			definition := &image.Definition{
+				Release: release.Release{
+					Core: release.Components{
+						Helm: []release.HelmChart{
+							{
+								Name: "rancher",
+							},
+						},
+					},
+				},
+			}
+
+			charts, err := setupHelmCharts(nil, definition, rm, "", "", resolver)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("retrieving helm charts: filtering enabled core helm charts: adding helm chart 'rancher': helm chart does not exist"))
 			Expect(charts).To(BeNil())
 		})
 

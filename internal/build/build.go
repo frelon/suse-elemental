@@ -64,8 +64,16 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolv
 
 	var runtimeHelmCharts []string
 	relativeK8sPath := filepath.Join("var", "lib", "elemental", "kubernetes")
-	if needsHelmChartsSetup(d, m) {
-		if len(d.Release.Product.Helm) != 0 {
+	if needsHelmChartsSetup(d) {
+		if len(d.Release.Core.Helm) > 0 {
+			var charts []string
+			for _, c := range d.Release.Core.Helm {
+				charts = append(charts, c.Name)
+			}
+
+			logger.Info("Enabling the following core components: %s", strings.Join(charts, ", "))
+		}
+		if len(d.Release.Product.Helm) > 0 {
 			var charts []string
 			for _, c := range d.Release.Product.Helm {
 				charts = append(charts, c.Name)

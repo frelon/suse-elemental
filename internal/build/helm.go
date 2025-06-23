@@ -42,10 +42,8 @@ type helmChart interface {
 	ToCRD(values []byte, repository string) *helm.CRD
 }
 
-func needsHelmChartsSetup(def *image.Definition, rm *resolver.ResolvedManifest) bool {
-	return (rm.CorePlatform != nil && rm.CorePlatform.Components.Helm != nil) ||
-		(rm.ProductExtension != nil && rm.ProductExtension.Components.Helm != nil && len(def.Release.Product.Helm) != 0) ||
-		def.Kubernetes.Helm != nil
+func needsHelmChartsSetup(def *image.Definition) bool {
+	return len(def.Release.Core.Helm) > 0 || len(def.Release.Product.Helm) > 0 || def.Kubernetes.Helm != nil
 }
 
 func setupHelmCharts(fs vfs.FS, def *image.Definition, rm *resolver.ResolvedManifest, overlaysPath, helmPath string, valuesResolver helmValuesResolver) (runtimeHelmCharts []string, err error) {
@@ -94,10 +92,10 @@ func writeHelmCharts(fs vfs.FS, crds []*helm.CRD, destDir string) (names []strin
 func retrieveHelmCharts(rm *resolver.ResolvedManifest, def *image.Definition, valuesResolver helmValuesResolver) ([]*helm.CRD, error) {
 	var crds []*helm.CRD
 
-	if rm.CorePlatform != nil && rm.CorePlatform.Components.Helm != nil {
-		var charts []helmChart
-		for _, chart := range rm.CorePlatform.Components.Helm.Charts {
-			charts = append(charts, chart)
+	if rm.CorePlatform != nil && rm.CorePlatform.Components.Helm != nil && len(def.Release.Core.Helm) > 0 {
+		charts, err := enabledHelmCharts(rm.CorePlatform.Components.Helm, &def.Release.Core)
+		if err != nil {
+			return nil, fmt.Errorf("filtering enabled core helm charts: %w", err)
 		}
 
 		if err := collectHelmCharts(charts, rm.CorePlatform.Components.Helm.ChartRepositories(), def.Release.Core.HelmValueFiles(), valuesResolver, &crds); err != nil {
@@ -105,7 +103,7 @@ func retrieveHelmCharts(rm *resolver.ResolvedManifest, def *image.Definition, va
 		}
 	}
 
-	if rm.ProductExtension != nil && rm.ProductExtension.Components.Helm != nil && len(def.Release.Product.Helm) != 0 {
+	if rm.ProductExtension != nil && rm.ProductExtension.Components.Helm != nil && len(def.Release.Product.Helm) > 0 {
 		charts, err := enabledHelmCharts(rm.ProductExtension.Components.Helm, &def.Release.Product)
 		if err != nil {
 			return nil, fmt.Errorf("filtering enabled product helm charts: %w", err)

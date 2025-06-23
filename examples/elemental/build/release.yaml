@@ -1,11 +1,9 @@
 name: suse-edge
 manifestURI: oci://registry.opensuse.org/home/adinov/core/containerfile/release-manifest:0.0.1
 # Enable core components explicitly or modify their default deployment (e.g. via additional Helm values)
-#core:
-#  helm:
-#    - chart: metallb
-#      valuesFile: metallb-values.yaml
-#
+core:
+  helm:
+    - chart: metallb
 # Enable product components
 product:
   helm:
