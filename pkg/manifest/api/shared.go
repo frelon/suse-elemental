@@ -17,6 +17,10 @@ limitations under the License.
 
 package api
 
+import (
+	"github.com/suse/elemental/v3/pkg/helm"
+)
+
 type MetaData struct {
 	Name             string   `yaml:"name"`
 	Version          string   `yaml:"version"`
@@ -29,6 +33,15 @@ type Helm struct {
 	Repositories []Repository `yaml:"repositories"`
 }
 
+func (h *Helm) ChartRepositories() map[string]string {
+	m := map[string]string{}
+	for _, repo := range h.Repositories {
+		m[repo.Name] = repo.URL
+	}
+
+	return m
+}
+
 type HelmChart struct {
 	Name       string         `yaml:"name,omitempty"`
 	Chart      string         `yaml:"chart"`
@@ -38,6 +51,22 @@ type HelmChart struct {
 	Values     map[string]any `yaml:"values,omitempty"`
 	DependsOn  []string       `yaml:"dependsOn,omitempty"`
 	Images     []ChartImage   `yaml:"images,omitempty"`
+}
+
+func (c *HelmChart) GetName() string {
+	return c.Chart
+}
+
+func (c *HelmChart) GetInlineValues() map[string]any {
+	return c.Values
+}
+
+func (c *HelmChart) GetRepositoryName() string {
+	return c.Repository
+}
+
+func (c *HelmChart) ToCRD(values []byte, repository string) *helm.CRD {
+	return helm.NewCRD(c.Namespace, c.Chart, c.Version, string(values), repository)
 }
 
 type ChartImage struct {

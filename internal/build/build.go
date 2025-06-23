@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/suse/elemental/v3/internal/helm"
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/os"
 	"github.com/suse/elemental/v3/internal/manifest/extractor"
@@ -50,7 +49,7 @@ var configScriptTpl string
 //go:embed templates/k8s_res_deploy.sh.tpl
 var k8sResDeployScriptTpl string
 
-func Run(ctx context.Context, d *image.Definition, buildDir string, configDir image.ConfigDir, system *sys.System) error {
+func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolver helmValuesResolver, system *sys.System) error {
 	logger := system.Logger()
 	runner := system.Runner()
 	fs := system.FS()
@@ -76,11 +75,6 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, configDir im
 		}
 
 		helmPath := filepath.Join(relativeK8sPath, "helm")
-		valuesResolver := &helm.ValuesResolver{
-			ValuesDir: configDir.HelmValuesDir(),
-			FS:        fs,
-		}
-
 		if runtimeHelmCharts, err = setupHelmCharts(fs, d, m, overlaysPath, helmPath, valuesResolver); err != nil {
 			logger.Error("Setting up Helm charts failed")
 			return err

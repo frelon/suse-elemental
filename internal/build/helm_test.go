@@ -24,10 +24,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/suse/elemental/v3/internal/helm"
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/kubernetes"
 	"github.com/suse/elemental/v3/internal/image/release"
+	"github.com/suse/elemental/v3/pkg/helm"
 	"github.com/suse/elemental/v3/pkg/manifest/api"
 	"github.com/suse/elemental/v3/pkg/manifest/api/core"
 	"github.com/suse/elemental/v3/pkg/manifest/api/product"
@@ -405,46 +405,36 @@ spec:
 		It("Successfully filters enabled Helm charts with dependency", func() {
 			e, err := enabledHelmCharts(h, &release.Components{Helm: []release.HelmChart{{Name: "neuvector"}}})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(e.Charts).To(HaveLen(2))
-			Expect(e.Repositories).To(HaveLen(1))
+			Expect(e).To(HaveLen(2))
 
-			chart := e.Charts[0]
+			chart := e[0].(*api.HelmChart)
 			Expect(chart.Name).To(Equal("NeuVector CRD"))
 			Expect(chart.Chart).To(Equal("neuvector-crd"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
 			Expect(chart.Namespace).To(Equal("neuvector-system"))
 			Expect(chart.Repository).To(Equal("rancher-charts"))
 
-			chart = e.Charts[1]
+			chart = e[1].(*api.HelmChart)
 			Expect(chart.Name).To(Equal("NeuVector"))
 			Expect(chart.Chart).To(Equal("neuvector"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
 			Expect(chart.Namespace).To(Equal("neuvector-system"))
 			Expect(chart.Repository).To(Equal("rancher-charts"))
 			Expect(chart.DependsOn).To(ConsistOf("neuvector-crd"))
-
-			repository := e.Repositories[0]
-			Expect(repository.Name).To(Equal("rancher-charts"))
-			Expect(repository.URL).To(Equal("https://charts.rancher.io/"))
 		})
 
 		It("Successfully filters enabled Helm chart", func() {
 			e, err := enabledHelmCharts(h, &release.Components{Helm: []release.HelmChart{{Name: "neuvector-crd"}}})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(e.Charts).To(HaveLen(1))
-			Expect(e.Repositories).To(HaveLen(1))
+			Expect(e).To(HaveLen(1))
 
-			chart := e.Charts[0]
+			chart := e[0].(*api.HelmChart)
 			Expect(chart.Name).To(Equal("NeuVector CRD"))
 			Expect(chart.Chart).To(Equal("neuvector-crd"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
 			Expect(chart.Namespace).To(Equal("neuvector-system"))
 			Expect(chart.Repository).To(Equal("rancher-charts"))
 			Expect(chart.DependsOn).To(BeEmpty())
-
-			repository := e.Repositories[0]
-			Expect(repository.Name).To(Equal("rancher-charts"))
-			Expect(repository.URL).To(Equal("https://charts.rancher.io/"))
 		})
 
 		It("Fails to find non-existing enabled Helm chart", func() {

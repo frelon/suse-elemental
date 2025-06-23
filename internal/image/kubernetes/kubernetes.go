@@ -17,6 +17,10 @@ limitations under the License.
 
 package kubernetes
 
+import (
+	"github.com/suse/elemental/v3/pkg/helm"
+)
+
 type Kubernetes struct {
 	// RemoteManifests - manifest URLs specified under config/kubernetes.yaml
 	RemoteManifests []string `yaml:"manifests,omitempty"`
@@ -31,12 +35,46 @@ type Helm struct {
 	Repositories []*HelmRepository `yaml:"repositories"`
 }
 
+func (h *Helm) ChartRepositories() map[string]string {
+	m := map[string]string{}
+	for _, repo := range h.Repositories {
+		m[repo.Name] = repo.URL
+	}
+
+	return m
+}
+
+func (h *Helm) ValueFiles() map[string]string {
+	m := map[string]string{}
+	for _, chart := range h.Charts {
+		m[chart.Name] = chart.ValuesFile
+	}
+
+	return m
+}
+
 type HelmChart struct {
 	Name            string `yaml:"name"`
 	RepositoryName  string `yaml:"repositoryName"`
 	Version         string `yaml:"version"`
 	TargetNamespace string `yaml:"targetNamespace"`
 	ValuesFile      string `yaml:"valuesFile"`
+}
+
+func (c *HelmChart) GetName() string {
+	return c.Name
+}
+
+func (c *HelmChart) GetInlineValues() map[string]any {
+	return nil
+}
+
+func (c *HelmChart) GetRepositoryName() string {
+	return c.RepositoryName
+}
+
+func (c *HelmChart) ToCRD(values []byte, repository string) *helm.CRD {
+	return helm.NewCRD(c.TargetNamespace, c.Name, c.Version, string(values), repository)
 }
 
 type HelmRepository struct {

@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/suse/elemental/v3/internal/helm"
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/release"
+	"github.com/suse/elemental/v3/pkg/helm"
 	"github.com/suse/elemental/v3/pkg/manifest/api"
 	"github.com/suse/elemental/v3/pkg/manifest/resolver"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
@@ -33,6 +33,13 @@ import (
 
 type helmValuesResolver interface {
 	Resolve(*helm.ValueSource) ([]byte, error)
+}
+
+type helmChart interface {
+	GetName() string
+	GetInlineValues() map[string]any
+	GetRepositoryName() string
+	ToCRD(values []byte, repository string) *helm.CRD
 }
 
 func needsHelmChartsSetup(def *image.Definition, rm *resolver.ResolvedManifest) bool {
@@ -88,99 +95,64 @@ func retrieveHelmCharts(rm *resolver.ResolvedManifest, def *image.Definition, va
 	var crds []*helm.CRD
 
 	if rm.CorePlatform != nil && rm.CorePlatform.Components.Helm != nil {
-		c, err := releaseHelmCharts(rm.CorePlatform.Components.Helm, &def.Release.Core, valuesResolver)
-		if err != nil {
-			return nil, fmt.Errorf("collecting core helm charts: %w", err)
+		var charts []helmChart
+		for _, chart := range rm.CorePlatform.Components.Helm.Charts {
+			charts = append(charts, chart)
 		}
 
-		crds = append(crds, c...)
+		if err := collectHelmCharts(charts, rm.CorePlatform.Components.Helm.ChartRepositories(), def.Release.Core.HelmValueFiles(), valuesResolver, &crds); err != nil {
+			return nil, fmt.Errorf("collecting core helm charts: %w", err)
+		}
 	}
 
 	if rm.ProductExtension != nil && rm.ProductExtension.Components.Helm != nil && len(def.Release.Product.Helm) != 0 {
-		enabledCharts, err := enabledHelmCharts(rm.ProductExtension.Components.Helm, &def.Release.Product)
+		charts, err := enabledHelmCharts(rm.ProductExtension.Components.Helm, &def.Release.Product)
 		if err != nil {
 			return nil, fmt.Errorf("filtering enabled product helm charts: %w", err)
 		}
 
-		c, err := releaseHelmCharts(enabledCharts, &def.Release.Product, valuesResolver)
-		if err != nil {
+		if err = collectHelmCharts(charts, rm.ProductExtension.Components.Helm.ChartRepositories(), def.Release.Product.HelmValueFiles(), valuesResolver, &crds); err != nil {
 			return nil, fmt.Errorf("collecting product helm charts: %w", err)
 		}
-
-		crds = append(crds, c...)
 	}
 
 	if def.Kubernetes.Helm != nil {
-		c, err := userHelmCharts(def, valuesResolver)
-		if err != nil {
+		var charts []helmChart
+		for _, chart := range def.Kubernetes.Helm.Charts {
+			charts = append(charts, chart)
+		}
+
+		if err := collectHelmCharts(charts, def.Kubernetes.Helm.ChartRepositories(), def.Kubernetes.Helm.ValueFiles(), valuesResolver, &crds); err != nil {
 			return nil, fmt.Errorf("collecting user helm charts: %w", err)
 		}
-
-		crds = append(crds, c...)
 	}
 
 	return crds, nil
 }
 
-func releaseHelmCharts(h *api.Helm, release *release.Components, valuesResolver helmValuesResolver) ([]*helm.CRD, error) {
-	var crds []*helm.CRD
-
-	repositories := map[string]string{}
-	for _, repo := range h.Repositories {
-		repositories[repo.Name] = repo.URL
-	}
-
-	valueFiles := map[string]string{}
-	for _, chart := range release.Helm {
-		valueFiles[chart.Name] = chart.ValuesFile
-	}
-
-	for _, chart := range h.Charts {
-		repository, ok := repositories[chart.Repository]
+func collectHelmCharts(charts []helmChart, repositories, valueFiles map[string]string, valuesResolver helmValuesResolver, crds *[]*helm.CRD) error {
+	for _, chart := range charts {
+		name := chart.GetName()
+		repository, ok := repositories[chart.GetRepositoryName()]
 		if !ok {
-			return nil, fmt.Errorf("repository not found for chart: %s", chart.Chart)
+			return fmt.Errorf("repository not found for chart: %s", name)
 		}
 
-		source := &helm.ValueSource{Inline: chart.Values, File: valueFiles[chart.Chart]}
+		source := &helm.ValueSource{Inline: chart.GetInlineValues(), File: valueFiles[name]}
 		values, err := valuesResolver.Resolve(source)
 		if err != nil {
-			return nil, fmt.Errorf("resolving values for chart %s: %w", chart.Chart, err)
+			return fmt.Errorf("resolving values for chart %s: %w", name, err)
 		}
 
-		crds = append(crds, helm.NewCRD(chart.Namespace, chart.Chart, chart.Version, string(values), repository))
+		crd := chart.ToCRD(values, repository)
+		*crds = append(*crds, crd)
 	}
 
-	return crds, nil
+	return nil
 }
 
-func userHelmCharts(def *image.Definition, valuesResolver helmValuesResolver) ([]*helm.CRD, error) {
-	var crds []*helm.CRD
-
-	repositories := map[string]string{}
-	for _, repo := range def.Kubernetes.Helm.Repositories {
-		repositories[repo.Name] = repo.URL
-	}
-
-	for _, chart := range def.Kubernetes.Helm.Charts {
-		repository, ok := repositories[chart.RepositoryName]
-		if !ok {
-			return nil, fmt.Errorf("repository not found for chart: %s", chart.Name)
-		}
-
-		source := &helm.ValueSource{File: chart.ValuesFile}
-		values, err := valuesResolver.Resolve(source)
-		if err != nil {
-			return nil, fmt.Errorf("resolving values for chart %s: %w", chart.Name, err)
-		}
-
-		crds = append(crds, helm.NewCRD(chart.TargetNamespace, chart.Name, chart.Version, string(values), repository))
-	}
-
-	return crds, nil
-}
-
-func enabledHelmCharts(helm *api.Helm, enabled *release.Components) (*api.Helm, error) {
-	h := &api.Helm{Repositories: helm.Repositories}
+func enabledHelmCharts(helm *api.Helm, enabled *release.Components) ([]helmChart, error) {
+	var charts []helmChart
 
 	allCharts := map[string]*api.HelmChart{}
 	for _, c := range helm.Charts {
@@ -196,8 +168,8 @@ func enabledHelmCharts(helm *api.Helm, enabled *release.Components) (*api.Helm, 
 			return fmt.Errorf("helm chart does not exist")
 		}
 
-		if slices.ContainsFunc(h.Charts, func(c *api.HelmChart) bool {
-			return c.Chart == name
+		if slices.ContainsFunc(charts, func(c helmChart) bool {
+			return c.GetName() == name
 		}) {
 			return nil
 		}
@@ -210,7 +182,7 @@ func enabledHelmCharts(helm *api.Helm, enabled *release.Components) (*api.Helm, 
 		}
 
 		// Add the main chart.
-		h.Charts = append(h.Charts, chart)
+		charts = append(charts, chart)
 
 		return nil
 	}
@@ -221,5 +193,5 @@ func enabledHelmCharts(helm *api.Helm, enabled *release.Components) (*api.Helm, 
 		}
 	}
 
-	return h, nil
+	return charts, nil
 }

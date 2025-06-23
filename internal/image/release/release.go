@@ -27,6 +27,15 @@ type Components struct {
 	Helm []HelmChart `yaml:"helm"`
 }
 
+func (c *Components) HelmValueFiles() map[string]string {
+	m := map[string]string{}
+	for _, chart := range c.Helm {
+		m[chart.Name] = chart.ValuesFile
+	}
+
+	return m
+}
+
 type HelmChart struct {
 	Name       string `yaml:"chart"`
 	ValuesFile string `yaml:"valuesFile,omitempty"`
