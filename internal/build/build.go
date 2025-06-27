@@ -66,25 +66,15 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolv
 	var runtimeHelmCharts []string
 	relativeK8sPath := filepath.Join("var", "lib", "elemental", "kubernetes")
 	if needsHelmChartsSetup(d) {
-		if len(d.Release.Core.Helm) > 0 {
-			var charts []string
-			for _, c := range d.Release.Core.Helm {
-				charts = append(charts, c.Name)
-			}
-
-			logger.Info("Enabling the following core components: %s", strings.Join(charts, ", "))
-		}
-		if len(d.Release.Product.Helm) > 0 {
-			var charts []string
-			for _, c := range d.Release.Product.Helm {
-				charts = append(charts, c.Name)
-			}
-
-			logger.Info("Enabling the following product extensions: %s", strings.Join(charts, ", "))
+		helm := &Helm{
+			FS:             fs,
+			RelativePath:   filepath.Join(relativeK8sPath, "helm"),
+			DestinationDir: overlaysPath,
+			ValuesResolver: valuesResolver,
+			Logger:         logger,
 		}
 
-		helmPath := filepath.Join(relativeK8sPath, "helm")
-		if runtimeHelmCharts, err = setupHelmCharts(fs, d, m, overlaysPath, helmPath, valuesResolver); err != nil {
+		if runtimeHelmCharts, err = helm.Configure(d, m); err != nil {
 			logger.Error("Setting up Helm charts failed")
 			return err
 		}
