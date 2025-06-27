@@ -53,6 +53,16 @@ type Helm struct {
 	Logger         log.Logger
 }
 
+func NewHelm(fs vfs.FS, valuesResolver helmValuesResolver, logger log.Logger, destinationDir string) *Helm {
+	return &Helm{
+		FS:             fs,
+		RelativePath:   image.HelmPath(),
+		DestinationDir: destinationDir,
+		ValuesResolver: valuesResolver,
+		Logger:         logger,
+	}
+}
+
 func needsHelmChartsSetup(def *image.Definition) bool {
 	return len(def.Release.Core.Helm) > 0 || len(def.Release.Product.Helm) > 0 || def.Kubernetes.Helm != nil
 }

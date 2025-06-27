@@ -49,12 +49,16 @@ var configScriptTpl string
 //go:embed templates/k8s_res_deploy.sh.tpl
 var k8sResDeployScriptTpl string
 
+type Builder struct {
+	System *sys.System
+	Helm   *Helm
+}
+
 // nolint:gocyclo
-func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolver helmValuesResolver, system *sys.System) error {
-	logger := system.Logger()
-	runner := system.Runner()
-	fs := system.FS()
-	overlaysPath := filepath.Join(buildDir, "overlays")
+func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.BuildDir) error {
+	logger := b.System.Logger()
+	runner := b.System.Runner()
+	fs := b.System.FS()
 
 	logger.Info("Resolving release manifest: %s", d.Release.ManifestURI)
 	m, err := resolveManifest(fs, d.Release.ManifestURI, buildDir)
@@ -64,17 +68,8 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolv
 	}
 
 	var runtimeHelmCharts []string
-	relativeK8sPath := filepath.Join("var", "lib", "elemental", "kubernetes")
 	if needsHelmChartsSetup(d) {
-		helm := &Helm{
-			FS:             fs,
-			RelativePath:   filepath.Join(relativeK8sPath, "helm"),
-			DestinationDir: overlaysPath,
-			ValuesResolver: valuesResolver,
-			Logger:         logger,
-		}
-
-		if runtimeHelmCharts, err = helm.Configure(d, m); err != nil {
+		if runtimeHelmCharts, err = b.Helm.Configure(d, m); err != nil {
 			logger.Error("Setting up Helm charts failed")
 			return err
 		}
@@ -82,8 +77,8 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolv
 
 	var runtimeManifestsDir string
 	if needsManifestsSetup(&d.Kubernetes) {
-		relativeManifestsPath := filepath.Join(relativeK8sPath, "manifests")
-		manifestsOverlayPath := filepath.Join(overlaysPath, relativeManifestsPath)
+		relativeManifestsPath := image.KubernetesManifestsPath()
+		manifestsOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeManifestsPath)
 		if err = setupManifests(ctx, fs, &d.Kubernetes, manifestsOverlayPath); err != nil {
 			logger.Error("Setting up Kubernetes manifests failed")
 			return err
@@ -94,7 +89,8 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolv
 
 	var runtimeK8sResDeployScript string
 	if len(runtimeHelmCharts) > 0 || runtimeManifestsDir != "" {
-		kubernetesOverlayPath := filepath.Join(overlaysPath, relativeK8sPath)
+		relativeK8sPath := image.KubernetesPath()
+		kubernetesOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
 		scriptInOverlay, err := writeK8sResDeployScript(fs, kubernetesOverlayPath, runtimeManifestsDir, runtimeHelmCharts)
 		if err != nil {
 			logger.Error("Setting up Kubernetes resource deployment script failed")
@@ -104,14 +100,14 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolv
 	}
 
 	logger.Info("Downloading RKE2 extension")
-	extensionsPath := filepath.Join(overlaysPath, "var", "lib", "extensions")
+	extensionsPath := filepath.Join(buildDir.OverlaysDir(), "var", "lib", "extensions")
 	if err = downloadExtension(ctx, fs, m.CorePlatform.Components.Kubernetes.RKE2.Image, extensionsPath); err != nil {
 		logger.Error("Downloading RKE2 extension %q failed", m.CorePlatform.Components.Kubernetes.RKE2.Image)
 		return err
 	}
 
 	logger.Info("Preparing configuration script")
-	configScript, err := writeConfigScript(fs, d, buildDir, runtimeK8sResDeployScript)
+	configScript, err := writeConfigScript(fs, d, string(buildDir), runtimeK8sResDeployScript)
 	if err != nil {
 		logger.Error("Preparing configuration script failed")
 		return err
@@ -137,28 +133,28 @@ func Run(ctx context.Context, d *image.Definition, buildDir string, valuesResolv
 
 	logger.Info("Preparing installation setup")
 	dep, err := newDeployment(
-		system,
+		b.System,
 		device,
 		d.Installation.Bootloader,
 		d.Installation.KernelCmdLine,
 		m.CorePlatform.Components.OperatingSystem.Image,
 		configScript,
-		overlaysPath,
+		buildDir.OverlaysDir(),
 	)
 	if err != nil {
 		logger.Error("Preparing installation setup failed")
 		return err
 	}
 
-	boot, err := bootloader.New(dep.BootConfig.Bootloader, system)
+	boot, err := bootloader.New(dep.BootConfig.Bootloader, b.System)
 	if err != nil {
 		logger.Error("Parsing boot config failed")
 		return err
 	}
 
-	manager := firmware.NewEfiBootManager(system)
-	upgrader := upgrade.New(ctx, system, upgrade.WithBootManager(manager), upgrade.WithBootloader(boot))
-	installer := install.New(ctx, system, install.WithUpgrader(upgrader))
+	manager := firmware.NewEfiBootManager(b.System)
+	upgrader := upgrade.New(ctx, b.System, upgrade.WithBootManager(manager), upgrade.WithBootloader(boot))
+	installer := install.New(ctx, b.System, install.WithUpgrader(upgrader))
 
 	logger.Info("Installing OS")
 	if err = installer.Install(dep); err != nil {
@@ -199,13 +195,13 @@ func newDeployment(system *sys.System, installationDevice, bootloader, kernelCmd
 	return d, nil
 }
 
-func resolveManifest(fs vfs.FS, manifestURI, storeDir string) (*resolver.ResolvedManifest, error) {
-	manifestStore := filepath.Join(storeDir, "release-manifests")
-	if err := vfs.MkdirAll(fs, manifestStore, 0700); err != nil {
-		return nil, fmt.Errorf("creating release manifest store '%s': %w", manifestStore, err)
+func resolveManifest(fs vfs.FS, manifestURI string, buildDir image.BuildDir) (*resolver.ResolvedManifest, error) {
+	manifestsDir := buildDir.ReleaseManifestsDir()
+	if err := vfs.MkdirAll(fs, manifestsDir, 0700); err != nil {
+		return nil, fmt.Errorf("creating release manifest store '%s': %w", manifestsDir, err)
 	}
 
-	extr, err := extractor.New(extractor.WithStore(manifestStore))
+	extr, err := extractor.New(extractor.WithStore(manifestsDir))
 	if err != nil {
 		return nil, fmt.Errorf("initialising OCI release manifest extractor: %w", err)
 	}

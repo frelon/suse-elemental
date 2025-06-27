@@ -77,8 +77,13 @@ func Build(ctx *cli.Context) error {
 		FS:        system.FS(),
 	}
 
+	builder := &build.Builder{
+		System: system,
+		Helm:   build.NewHelm(system.FS(), valuesResolver, system.Logger(), buildDir.OverlaysDir()),
+	}
+
 	logger.Info("Starting build process for %s %s image", definition.Image.Platform.String(), definition.Image.ImageType)
-	if err = build.Run(ctxCancel, definition, buildDir, valuesResolver, system); err != nil {
+	if err = builder.Run(ctxCancel, definition, buildDir); err != nil {
 		logger.Error("Build process failed")
 		return err
 	}
@@ -170,10 +175,10 @@ func parseImageDefinition(args *cmd.BuildFlags) (*image.Definition, error) {
 	return definition, nil
 }
 
-func createBuildDir(rootBuildDir string) (string, error) {
+func createBuildDir(rootBuildDir string) (image.BuildDir, error) {
 	buildDirName := fmt.Sprintf("build-%s", time.Now().UTC().Format("2006-01-02T15-04-05"))
 	buildDirPath := filepath.Join(rootBuildDir, buildDirName)
-	return buildDirPath, os.MkdirAll(buildDirPath, 0700)
+	return image.BuildDir(buildDirPath), os.MkdirAll(buildDirPath, 0700)
 }
 
 func parseKubernetesDir(configDir image.ConfigDir, k *kubernetes.Kubernetes) error {
