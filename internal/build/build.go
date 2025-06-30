@@ -19,7 +19,6 @@ package build
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,7 +30,6 @@ import (
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/os"
 	"github.com/suse/elemental/v3/internal/manifest/extractor"
-	"github.com/suse/elemental/v3/internal/template"
 	"github.com/suse/elemental/v3/pkg/bootloader"
 	"github.com/suse/elemental/v3/pkg/deployment"
 	"github.com/suse/elemental/v3/pkg/firmware"
@@ -42,9 +40,6 @@ import (
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
 	"github.com/suse/elemental/v3/pkg/upgrade"
 )
-
-//go:embed templates/config.sh.tpl
-var configScriptTpl string
 
 type Builder struct {
 	System *sys.System
@@ -176,34 +171,6 @@ func resolveManifest(fs vfs.FS, manifestURI string, buildDir image.BuildDir) (*r
 	}
 
 	return m, nil
-}
-
-func writeConfigScript(fs vfs.FS, d *image.Definition, dest, k8sResourceDeployScript string) (string, error) {
-	const configScriptName = "config.sh"
-
-	values := struct {
-		Users                []os.User
-		KubernetesDir        string
-		ManifestDeployScript string
-	}{
-		Users: d.OperatingSystem.Users,
-	}
-
-	if k8sResourceDeployScript != "" {
-		values.KubernetesDir = filepath.Dir(k8sResourceDeployScript)
-		values.ManifestDeployScript = k8sResourceDeployScript
-	}
-
-	data, err := template.Parse(configScriptName, configScriptTpl, &values)
-	if err != nil {
-		return "", fmt.Errorf("parsing config script template: %w", err)
-	}
-
-	filename := filepath.Join(dest, configScriptName)
-	if err = fs.WriteFile(filename, []byte(data), 0o744); err != nil {
-		return "", fmt.Errorf("writing config script: %w", err)
-	}
-	return filename, nil
 }
 
 func createDisk(runner sys.Runner, img image.Image, diskSize os.DiskSize) error {
