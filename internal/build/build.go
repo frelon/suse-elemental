@@ -46,15 +46,11 @@ import (
 //go:embed templates/config.sh.tpl
 var configScriptTpl string
 
-//go:embed templates/k8s_res_deploy.sh.tpl
-var k8sResDeployScriptTpl string
-
 type Builder struct {
 	System *sys.System
 	Helm   *Helm
 }
 
-// nolint:gocyclo
 func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.BuildDir) error {
 	logger := b.System.Logger()
 	runner := b.System.Runner()
@@ -67,47 +63,14 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 		return err
 	}
 
-	var runtimeHelmCharts []string
-	if needsHelmChartsSetup(d) {
-		if runtimeHelmCharts, err = b.Helm.Configure(d, m); err != nil {
-			logger.Error("Setting up Helm charts failed")
-			return err
-		}
-	}
-
-	var runtimeManifestsDir string
-	if needsManifestsSetup(&d.Kubernetes) {
-		relativeManifestsPath := image.KubernetesManifestsPath()
-		manifestsOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeManifestsPath)
-		if err = setupManifests(ctx, fs, &d.Kubernetes, manifestsOverlayPath); err != nil {
-			logger.Error("Setting up Kubernetes manifests failed")
-			return err
-		}
-
-		runtimeManifestsDir = filepath.Join("/", relativeManifestsPath)
-	}
-
-	var runtimeK8sResDeployScript string
-	if len(runtimeHelmCharts) > 0 || runtimeManifestsDir != "" {
-		relativeK8sPath := image.KubernetesPath()
-		kubernetesOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
-		scriptInOverlay, err := writeK8sResDeployScript(fs, kubernetesOverlayPath, runtimeManifestsDir, runtimeHelmCharts)
-		if err != nil {
-			logger.Error("Setting up Kubernetes resource deployment script failed")
-			return err
-		}
-		runtimeK8sResDeployScript = filepath.Join("/", relativeK8sPath, filepath.Base(scriptInOverlay))
-	}
-
-	logger.Info("Downloading RKE2 extension")
-	extensionsPath := filepath.Join(buildDir.OverlaysDir(), "var", "lib", "extensions")
-	if err = downloadExtension(ctx, fs, m.CorePlatform.Components.Kubernetes.RKE2.Image, extensionsPath); err != nil {
-		logger.Error("Downloading RKE2 extension %q failed", m.CorePlatform.Components.Kubernetes.RKE2.Image)
+	k8sScript, err := b.configureKubernetes(ctx, d, m, buildDir)
+	if err != nil {
+		logger.Error("Configuring Kubernetes failed")
 		return err
 	}
 
 	logger.Info("Preparing configuration script")
-	configScript, err := writeConfigScript(fs, d, string(buildDir), runtimeK8sResDeployScript)
+	configScript, err := writeConfigScript(fs, d, string(buildDir), k8sScript)
 	if err != nil {
 		logger.Error("Preparing configuration script failed")
 		return err
@@ -215,7 +178,7 @@ func resolveManifest(fs vfs.FS, manifestURI string, buildDir image.BuildDir) (*r
 	return m, nil
 }
 
-func writeConfigScript(fs vfs.FS, d *image.Definition, dest, runtimeK8sResDeployScript string) (string, error) {
+func writeConfigScript(fs vfs.FS, d *image.Definition, dest, k8sResourceDeployScript string) (string, error) {
 	const configScriptName = "config.sh"
 
 	values := struct {
@@ -226,9 +189,9 @@ func writeConfigScript(fs vfs.FS, d *image.Definition, dest, runtimeK8sResDeploy
 		Users: d.OperatingSystem.Users,
 	}
 
-	if runtimeK8sResDeployScript != "" {
-		values.KubernetesDir = filepath.Dir(runtimeK8sResDeployScript)
-		values.ManifestDeployScript = runtimeK8sResDeployScript
+	if k8sResourceDeployScript != "" {
+		values.KubernetesDir = filepath.Dir(k8sResourceDeployScript)
+		values.ManifestDeployScript = k8sResourceDeployScript
 	}
 
 	data, err := template.Parse(configScriptName, configScriptTpl, &values)

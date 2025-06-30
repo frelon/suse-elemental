@@ -19,16 +19,67 @@ package build
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"path/filepath"
 
+	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/kubernetes"
 	"github.com/suse/elemental/v3/internal/template"
+	"github.com/suse/elemental/v3/pkg/manifest/resolver"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
 )
 
+//go:embed templates/k8s_res_deploy.sh.tpl
+var k8sResDeployScriptTpl string
+
 func needsManifestsSetup(k *kubernetes.Kubernetes) bool {
 	return len(k.RemoteManifests) > 0 || len(k.LocalManifests) > 0
+}
+
+func (b *Builder) configureKubernetes(
+	ctx context.Context,
+	def *image.Definition,
+	manifest *resolver.ResolvedManifest,
+	buildDir image.BuildDir,
+) (k8sResourceScript string, err error) {
+	b.System.Logger().Info("Downloading RKE2 extension")
+
+	extensionsPath := filepath.Join(buildDir.OverlaysDir(), "var", "lib", "extensions")
+	if err = downloadExtension(ctx, b.System.FS(), manifest.CorePlatform.Components.Kubernetes.RKE2.Image, extensionsPath); err != nil {
+		return "", fmt.Errorf("downloading RKE2 extension %q: %w", manifest.CorePlatform.Components.Kubernetes.RKE2.Image, err)
+	}
+
+	var runtimeHelmCharts []string
+	if needsHelmChartsSetup(def) {
+		if runtimeHelmCharts, err = b.Helm.Configure(def, manifest); err != nil {
+			return "", fmt.Errorf("configuring helm charts: %w", err)
+		}
+	}
+
+	var runtimeManifestsDir string
+	if needsManifestsSetup(&def.Kubernetes) {
+		relativeManifestsPath := image.KubernetesManifestsPath()
+		manifestsOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeManifestsPath)
+		if err = setupManifests(ctx, b.System.FS(), &def.Kubernetes, manifestsOverlayPath); err != nil {
+			return "", fmt.Errorf("configuring kubernetes manifests: %w", err)
+		}
+
+		runtimeManifestsDir = filepath.Join("/", relativeManifestsPath)
+	}
+
+	if len(runtimeHelmCharts) > 0 || runtimeManifestsDir != "" {
+		relativeK8sPath := image.KubernetesPath()
+		kubernetesOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
+		scriptInOverlay, err := writeK8sResDeployScript(b.System.FS(), kubernetesOverlayPath, runtimeManifestsDir, runtimeHelmCharts)
+		if err != nil {
+			return "", fmt.Errorf("writing kubernetes resource deployment script: %w", err)
+		}
+
+		k8sResourceScript = filepath.Join("/", relativeK8sPath, filepath.Base(scriptInOverlay))
+	}
+
+	return k8sResourceScript, nil
 }
 
 func setupManifests(ctx context.Context, fs vfs.FS, k *kubernetes.Kubernetes, manifestsDir string) error {
