@@ -35,6 +35,7 @@ import (
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/kubernetes"
 	"github.com/suse/elemental/v3/pkg/helm"
+	"github.com/suse/elemental/v3/pkg/http"
 	"github.com/suse/elemental/v3/pkg/sys"
 	"github.com/suse/elemental/v3/pkg/sys/platform"
 )
@@ -78,8 +79,9 @@ func Build(ctx *cli.Context) error {
 	}
 
 	builder := &build.Builder{
-		System: system,
-		Helm:   build.NewHelm(system.FS(), valuesResolver, system.Logger(), buildDir.OverlaysDir()),
+		System:       system,
+		Helm:         build.NewHelm(system.FS(), valuesResolver, system.Logger(), buildDir.OverlaysDir()),
+		DownloadFile: http.DownloadFile,
 	}
 
 	logger.Info("Starting build process for %s %s image", definition.Image.Platform.String(), definition.Image.ImageType)

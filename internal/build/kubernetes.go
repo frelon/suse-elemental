@@ -45,9 +45,16 @@ func (b *Builder) configureKubernetes(
 ) (k8sResourceScript string, err error) {
 	b.System.Logger().Info("Downloading RKE2 extension")
 
-	extensionsPath := filepath.Join(buildDir.OverlaysDir(), "var", "lib", "extensions")
-	if err = downloadExtension(ctx, b.System.FS(), manifest.CorePlatform.Components.Kubernetes.RKE2.Image, extensionsPath); err != nil {
-		return "", fmt.Errorf("downloading RKE2 extension %q: %w", manifest.CorePlatform.Components.Kubernetes.RKE2.Image, err)
+	extensionsDir := filepath.Join(buildDir.OverlaysDir(), "var", "lib", "extensions")
+	if err = vfs.MkdirAll(b.System.FS(), extensionsDir, 0o700); err != nil {
+		return "", fmt.Errorf("creating extensions directory: %w", err)
+	}
+
+	rke2URL := manifest.CorePlatform.Components.Kubernetes.RKE2.Image
+	rke2Extension := filepath.Join(extensionsDir, filepath.Base(rke2URL))
+
+	if err = b.DownloadFile(ctx, b.System.FS(), rke2URL, rke2Extension); err != nil {
+		return "", fmt.Errorf("downloading RKE2 extension %q: %w", rke2URL, err)
 	}
 
 	var runtimeHelmCharts []string
@@ -61,7 +68,7 @@ func (b *Builder) configureKubernetes(
 	if needsManifestsSetup(&def.Kubernetes) {
 		relativeManifestsPath := image.KubernetesManifestsPath()
 		manifestsOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeManifestsPath)
-		if err = setupManifests(ctx, b.System.FS(), &def.Kubernetes, manifestsOverlayPath); err != nil {
+		if err = b.setupManifests(ctx, &def.Kubernetes, manifestsOverlayPath); err != nil {
 			return "", fmt.Errorf("configuring kubernetes manifests: %w", err)
 		}
 
@@ -82,14 +89,17 @@ func (b *Builder) configureKubernetes(
 	return k8sResourceScript, nil
 }
 
-func setupManifests(ctx context.Context, fs vfs.FS, k *kubernetes.Kubernetes, manifestsDir string) error {
+func (b *Builder) setupManifests(ctx context.Context, k *kubernetes.Kubernetes, manifestsDir string) error {
+	fs := b.System.FS()
 	if err := vfs.MkdirAll(fs, manifestsDir, vfs.DirPerm); err != nil {
 		return fmt.Errorf("setting up manifests directory '%s': %w", manifestsDir, err)
 	}
 
 	for _, manifest := range k.RemoteManifests {
-		if err := downloadExtension(ctx, fs, manifest, manifestsDir); err != nil {
-			return fmt.Errorf("downloading remote Kubernetes manfiest '%s': %w", manifest, err)
+		path := filepath.Join(manifestsDir, filepath.Base(manifest))
+
+		if err := b.DownloadFile(ctx, fs, manifest, path); err != nil {
+			return fmt.Errorf("downloading remote Kubernetes manifest '%s': %w", manifest, err)
 		}
 	}
 

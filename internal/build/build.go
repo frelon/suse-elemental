@@ -20,12 +20,7 @@ package build
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/os"
@@ -41,9 +36,16 @@ import (
 	"github.com/suse/elemental/v3/pkg/upgrade"
 )
 
+type downloadFunc func(ctx context.Context, fs vfs.FS, url, path string) error
+
+type helmConfigurator interface {
+	Configure(definition *image.Definition, manifest *resolver.ResolvedManifest) ([]string, error)
+}
+
 type Builder struct {
-	System *sys.System
-	Helm   *Helm
+	System       *sys.System
+	Helm         helmConfigurator
+	DownloadFile downloadFunc
 }
 
 func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.BuildDir) error {
@@ -199,51 +201,4 @@ func attachDevice(runner sys.Runner, img image.Image) (string, error) {
 func detachDevice(runner sys.Runner, device string) error {
 	_, err := runner.Run("losetup", "-d", device)
 	return err
-}
-
-func downloadExtension(ctx context.Context, fs vfs.FS, downloadURL, extensionsPath string) error {
-	if err := vfs.MkdirAll(fs, extensionsPath, 0700); err != nil {
-		return fmt.Errorf("setting up extensions directory '%s': %w", extensionsPath, err)
-	}
-
-	parsedURL, err := url.Parse(downloadURL)
-	if err != nil {
-		return fmt.Errorf("invalid url '%s': %w", downloadURL, err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
-	if err != nil {
-		return fmt.Errorf("creating HTTP request: %w", err)
-	}
-
-	httpClient := &http.Client{Timeout: 90 * time.Second}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("downloading file: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("downloading file returned unexpected status code: %d", resp.StatusCode)
-	}
-
-	fileName := filepath.Base(parsedURL.Path)
-	output := filepath.Join(extensionsPath, fileName)
-
-	file, err := fs.Create(output)
-	if err != nil {
-		return fmt.Errorf("creating file %q: %w", output, err)
-	}
-
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
-		_ = file.Close()
-		return fmt.Errorf("copying file contents: %w", err)
-	}
-
-	if err = file.Close(); err != nil {
-		return fmt.Errorf("closing file: %w", err)
-	}
-
-	return nil
 }
