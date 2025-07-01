@@ -24,9 +24,6 @@ import (
 	"github.com/suse/elemental/v3/pkg/sys"
 )
 
-const Ghw = "ghw"
-const Lsblk = "lsblk"
-
 type Device interface {
 	GetAllPartitions() (PartitionList, error)
 	GetDevicePartitions(device string) (PartitionList, error)
