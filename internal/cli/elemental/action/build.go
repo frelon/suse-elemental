@@ -82,6 +82,7 @@ func Build(ctx *cli.Context) error {
 		System:       system,
 		Helm:         build.NewHelm(system.FS(), valuesResolver, system.Logger(), buildDir.OverlaysDir()),
 		DownloadFile: http.DownloadFile,
+		Local:        args.Local,
 	}
 
 	logger.Info("Starting build process for %s %s image", definition.Image.Platform.String(), definition.Image.ImageType)

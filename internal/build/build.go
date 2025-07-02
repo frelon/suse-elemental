@@ -33,6 +33,7 @@ import (
 	"github.com/suse/elemental/v3/pkg/manifest/source"
 	"github.com/suse/elemental/v3/pkg/sys"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
+	"github.com/suse/elemental/v3/pkg/unpack"
 	"github.com/suse/elemental/v3/pkg/upgrade"
 )
 
@@ -46,6 +47,7 @@ type Builder struct {
 	System       *sys.System
 	Helm         helmConfigurator
 	DownloadFile downloadFunc
+	Local        bool
 }
 
 func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.BuildDir) error {
@@ -113,7 +115,10 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 	}
 
 	manager := firmware.NewEfiBootManager(b.System)
-	upgrader := upgrade.New(ctx, b.System, upgrade.WithBootManager(manager), upgrade.WithBootloader(boot))
+	upgrader := upgrade.New(
+		ctx, b.System, upgrade.WithBootManager(manager), upgrade.WithBootloader(boot),
+		upgrade.WithUnpackOpts(unpack.WithLocal(b.Local)),
+	)
 	installer := install.New(ctx, b.System, install.WithUpgrader(upgrader))
 
 	logger.Info("Installing OS")
