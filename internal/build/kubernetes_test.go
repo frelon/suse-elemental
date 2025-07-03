@@ -18,15 +18,37 @@ limitations under the License.
 package build
 
 import (
+	"context"
+	"fmt"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/kubernetes"
 	"github.com/suse/elemental/v3/internal/image/release"
+	"github.com/suse/elemental/v3/pkg/log"
+	"github.com/suse/elemental/v3/pkg/manifest/api/core"
+	"github.com/suse/elemental/v3/pkg/manifest/resolver"
+	"github.com/suse/elemental/v3/pkg/sys"
+	sysmock "github.com/suse/elemental/v3/pkg/sys/mock"
+	"github.com/suse/elemental/v3/pkg/sys/vfs"
 )
 
-var _ = Describe("Kubernetes tests", func() {
+type helmConfiguratorMock struct {
+	configureFunc func(*image.Definition, *resolver.ResolvedManifest) ([]string, error)
+}
+
+func (h *helmConfiguratorMock) Configure(def *image.Definition, manifest *resolver.ResolvedManifest) ([]string, error) {
+	if h.configureFunc != nil {
+		return h.configureFunc(def, manifest)
+	}
+
+	panic("not implemented")
+}
+
+var _ = Describe("Kubernetes", func() {
 	Describe("Resources trigger", func() {
 		It("Skips manifests setup if manifests are not provided", func() {
 			k := &kubernetes.Kubernetes{}
@@ -96,5 +118,180 @@ var _ = Describe("Kubernetes tests", func() {
 
 			Expect(needsHelmChartsSetup(def)).To(BeTrue())
 		})
+	})
+
+	Describe("Configuration", func() {
+		const buildDir image.BuildDir = "/_build"
+
+		var system *sys.System
+		var fs vfs.FS
+		var cleanup func()
+		var err error
+
+		BeforeEach(func() {
+			fs, cleanup, err = sysmock.TestFS(nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(vfs.MkdirAll(fs, string(buildDir), vfs.DirPerm)).To(Succeed())
+
+			system, err = sys.NewSystem(
+				sys.WithLogger(log.New(log.WithDiscardAll())),
+				sys.WithFS(fs),
+			)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cleanup()
+		})
+
+		It("Fails to download RKE2 extension", func() {
+			builder := &Builder{
+				System: system,
+				DownloadFile: func(ctx context.Context, fs vfs.FS, url, path string) error {
+					return fmt.Errorf("download failed")
+				},
+			}
+
+			manifest := &resolver.ResolvedManifest{
+				CorePlatform: &core.ReleaseManifest{
+					Components: core.Components{
+						Kubernetes: core.Kubernetes{
+							RKE2: &core.RKE2{
+								Image: "some-url",
+							},
+						},
+					},
+				},
+			}
+
+			script, err := builder.configureKubernetes(context.Background(), nil, manifest, buildDir)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("downloading RKE2 extension: download failed"))
+			Expect(script).To(BeEmpty())
+		})
+
+		It("Fails to configure Helm charts", func() {
+			builder := &Builder{
+				System: system,
+				Helm: &helmConfiguratorMock{
+					configureFunc: func(definition *image.Definition, manifest *resolver.ResolvedManifest) ([]string, error) {
+						return nil, fmt.Errorf("helm error")
+					},
+				},
+				DownloadFile: func(ctx context.Context, fs vfs.FS, url, path string) error {
+					return nil
+				},
+			}
+
+			manifest := &resolver.ResolvedManifest{
+				CorePlatform: &core.ReleaseManifest{
+					Components: core.Components{
+						Kubernetes: core.Kubernetes{
+							RKE2: &core.RKE2{
+								Image: "some-url",
+							},
+						},
+					},
+				},
+			}
+
+			def := &image.Definition{
+				Release: release.Release{
+					Product: release.Components{
+						Helm: []release.HelmChart{
+							{
+								Name: "rancher",
+							},
+						},
+					},
+				},
+			}
+
+			script, err := builder.configureKubernetes(context.Background(), def, manifest, buildDir)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("configuring helm charts: helm error"))
+			Expect(script).To(BeEmpty())
+		})
+
+		It("Succeeds to configure RKE2 with additional resources", func() {
+			builder := &Builder{
+				System: system,
+				Helm: &helmConfiguratorMock{
+					configureFunc: func(definition *image.Definition, manifest *resolver.ResolvedManifest) ([]string, error) {
+						return []string{"rancher.yaml"}, nil
+					},
+				},
+				DownloadFile: func(ctx context.Context, fs vfs.FS, url, path string) error {
+					return nil
+				},
+			}
+
+			manifest := &resolver.ResolvedManifest{
+				CorePlatform: &core.ReleaseManifest{
+					Components: core.Components{
+						Kubernetes: core.Kubernetes{
+							RKE2: &core.RKE2{
+								Image: "some-url",
+							},
+						},
+					},
+				},
+			}
+
+			def := &image.Definition{
+				Kubernetes: kubernetes.Kubernetes{
+					RemoteManifests: []string{"some-url"},
+				},
+				Release: release.Release{
+					Product: release.Components{
+						Helm: []release.HelmChart{
+							{
+								Name: "rancher",
+							},
+						},
+					},
+				},
+			}
+
+			script, err := builder.configureKubernetes(context.Background(), def, manifest, buildDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(script).To(Equal("/var/lib/elemental/kubernetes/k8s_res_deploy.sh"))
+
+			// Verify deployment script contents
+			b, err := fs.ReadFile(filepath.Join(buildDir.OverlaysDir(), script))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(b)).To(ContainSubstring("deployHelmCharts"))
+			Expect(string(b)).To(ContainSubstring("rancher.yaml"))
+			Expect(string(b)).To(ContainSubstring("deployManifests"))
+		})
+
+		It("Succeeds to configure RKE2 without additional resources", func() {
+			builder := &Builder{
+				System: system,
+				DownloadFile: func(ctx context.Context, fs vfs.FS, url, path string) error {
+					return nil
+				},
+			}
+
+			manifest := &resolver.ResolvedManifest{
+				CorePlatform: &core.ReleaseManifest{
+					Components: core.Components{
+						Kubernetes: core.Kubernetes{
+							RKE2: &core.RKE2{
+								Image: "some-url",
+							},
+						},
+					},
+				},
+			}
+
+			def := &image.Definition{}
+
+			script, err := builder.configureKubernetes(context.Background(), def, manifest, buildDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(script).To(BeEmpty())
+		})
+
 	})
 })
