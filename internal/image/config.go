@@ -64,6 +64,10 @@ func (dir BuildDir) ReleaseManifestsDir() string {
 	return filepath.Join(string(dir), "release-manifests")
 }
 
+func ExtensionsPath() string {
+	return filepath.Join("var", "lib", "extensions")
+}
+
 func KubernetesPath() string {
 	return filepath.Join("var", "lib", "elemental", "kubernetes")
 }

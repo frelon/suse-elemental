@@ -43,77 +43,83 @@ func (b *Builder) configureKubernetes(
 	manifest *resolver.ResolvedManifest,
 	buildDir image.BuildDir,
 ) (k8sResourceScript string, err error) {
-	b.System.Logger().Info("Downloading RKE2 extension")
-
-	extensionsDir := filepath.Join(buildDir.OverlaysDir(), "var", "lib", "extensions")
-	if err = vfs.MkdirAll(b.System.FS(), extensionsDir, 0o700); err != nil {
-		return "", fmt.Errorf("creating extensions directory: %w", err)
-	}
-
-	rke2URL := manifest.CorePlatform.Components.Kubernetes.RKE2.Image
-	rke2Extension := filepath.Join(extensionsDir, filepath.Base(rke2URL))
-
-	if err = b.DownloadFile(ctx, b.System.FS(), rke2URL, rke2Extension); err != nil {
-		return "", fmt.Errorf("downloading RKE2 extension %q: %w", rke2URL, err)
+	if err = b.downloadRKE2(ctx, manifest, buildDir); err != nil {
+		return "", fmt.Errorf("downloading RKE2 extension: %w", err)
 	}
 
 	var runtimeHelmCharts []string
 	if needsHelmChartsSetup(def) {
-		if runtimeHelmCharts, err = b.Helm.Configure(def, manifest); err != nil {
+		b.System.Logger().Info("Configuring Helm charts")
+
+		runtimeHelmCharts, err = b.Helm.Configure(def, manifest)
+		if err != nil {
 			return "", fmt.Errorf("configuring helm charts: %w", err)
 		}
 	}
 
 	var runtimeManifestsDir string
 	if needsManifestsSetup(&def.Kubernetes) {
-		relativeManifestsPath := image.KubernetesManifestsPath()
-		manifestsOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeManifestsPath)
-		if err = b.setupManifests(ctx, &def.Kubernetes, manifestsOverlayPath); err != nil {
+		b.System.Logger().Info("Configuring Kubernetes manifests")
+
+		runtimeManifestsDir, err = b.setupManifests(ctx, &def.Kubernetes, buildDir)
+		if err != nil {
 			return "", fmt.Errorf("configuring kubernetes manifests: %w", err)
 		}
-
-		runtimeManifestsDir = filepath.Join("/", relativeManifestsPath)
 	}
 
 	if len(runtimeHelmCharts) > 0 || runtimeManifestsDir != "" {
-		relativeK8sPath := image.KubernetesPath()
-		kubernetesOverlayPath := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
-		scriptInOverlay, err := writeK8sResDeployScript(b.System.FS(), kubernetesOverlayPath, runtimeManifestsDir, runtimeHelmCharts)
+		k8sResourceScript, err = writeK8sResDeployScript(b.System.FS(), buildDir, runtimeManifestsDir, runtimeHelmCharts)
 		if err != nil {
 			return "", fmt.Errorf("writing kubernetes resource deployment script: %w", err)
 		}
-
-		k8sResourceScript = filepath.Join("/", relativeK8sPath, filepath.Base(scriptInOverlay))
 	}
 
 	return k8sResourceScript, nil
 }
 
-func (b *Builder) setupManifests(ctx context.Context, k *kubernetes.Kubernetes, manifestsDir string) error {
+func (b *Builder) downloadRKE2(ctx context.Context, manifest *resolver.ResolvedManifest, buildDir image.BuildDir) error {
+	extensionsDir := filepath.Join(buildDir.OverlaysDir(), image.ExtensionsPath())
+	if err := vfs.MkdirAll(b.System.FS(), extensionsDir, 0o700); err != nil {
+		return fmt.Errorf("creating extensions directory: %w", err)
+	}
+
+	rke2URL := manifest.CorePlatform.Components.Kubernetes.RKE2.Image
+	rke2ExtensionPath := filepath.Join(extensionsDir, filepath.Base(rke2URL))
+
+	b.System.Logger().Info("Downloading RKE2 extension %q...", rke2URL)
+
+	return b.DownloadFile(ctx, b.System.FS(), rke2URL, rke2ExtensionPath)
+}
+
+func (b *Builder) setupManifests(ctx context.Context, k *kubernetes.Kubernetes, buildDir image.BuildDir) (string, error) {
 	fs := b.System.FS()
+
+	relativeManifestsPath := filepath.Join("/", image.KubernetesManifestsPath())
+	manifestsDir := filepath.Join(buildDir.OverlaysDir(), relativeManifestsPath)
+
 	if err := vfs.MkdirAll(fs, manifestsDir, vfs.DirPerm); err != nil {
-		return fmt.Errorf("setting up manifests directory '%s': %w", manifestsDir, err)
+		return "", fmt.Errorf("setting up manifests directory '%s': %w", manifestsDir, err)
 	}
 
 	for _, manifest := range k.RemoteManifests {
 		path := filepath.Join(manifestsDir, filepath.Base(manifest))
 
 		if err := b.DownloadFile(ctx, fs, manifest, path); err != nil {
-			return fmt.Errorf("downloading remote Kubernetes manifest '%s': %w", manifest, err)
+			return "", fmt.Errorf("downloading remote Kubernetes manifest '%s': %w", manifest, err)
 		}
 	}
 
 	for _, manifest := range k.LocalManifests {
 		overlayPath := filepath.Join(manifestsDir, filepath.Base(manifest))
 		if err := vfs.CopyFile(fs, manifest, overlayPath); err != nil {
-			return fmt.Errorf("copying local manifest '%s' to '%s': %w", manifest, overlayPath, err)
+			return "", fmt.Errorf("copying local manifest '%s' to '%s': %w", manifest, overlayPath, err)
 		}
 	}
 
-	return nil
+	return relativeManifestsPath, nil
 }
 
-func writeK8sResDeployScript(fs vfs.FS, dest, runtimeManifestsDir string, runtimeHelmCharts []string) (path string, err error) {
+func writeK8sResDeployScript(fs vfs.FS, buildDir image.BuildDir, runtimeManifestsDir string, runtimeHelmCharts []string) (string, error) {
 	const k8sResDeployScriptName = "k8s_res_deploy.sh"
 
 	values := struct {
@@ -126,12 +132,22 @@ func writeK8sResDeployScript(fs vfs.FS, dest, runtimeManifestsDir string, runtim
 
 	data, err := template.Parse(k8sResDeployScriptName, k8sResDeployScriptTpl, &values)
 	if err != nil {
-		return "", fmt.Errorf("parsing template for %s: %w", k8sResDeployScriptName, err)
+		return "", fmt.Errorf("parsing deployment template: %w", err)
 	}
 
-	filename := filepath.Join(dest, k8sResDeployScriptName)
-	if err = fs.WriteFile(filename, []byte(data), 0o744); err != nil {
-		return "", fmt.Errorf("writing %s: %w", filename, err)
+	relativeK8sPath := filepath.Join("/", image.KubernetesPath())
+	destDir := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
+
+	if err = vfs.MkdirAll(fs, destDir, vfs.DirPerm); err != nil {
+		return "", fmt.Errorf("creating destination directory: %w", err)
 	}
-	return filename, nil
+
+	fullPath := filepath.Join(destDir, k8sResDeployScriptName)
+	relativePath := filepath.Join(relativeK8sPath, k8sResDeployScriptName)
+
+	if err = fs.WriteFile(fullPath, []byte(data), 0o744); err != nil {
+		return "", fmt.Errorf("writing deployment script %q: %w", fullPath, err)
+	}
+
+	return relativePath, nil
 }
