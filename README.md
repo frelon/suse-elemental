@@ -24,7 +24,7 @@ Elemental can be used to convert an OCI image into a bootable disk-image. This r
 $ make # build elemental binaries
 $ docker build -f ./examples/tumbleweed/Dockerfile -t elemental-tumbleweed:latest ./examples/tumbleweed
 $ qemu-img create -f raw build/elemental-tumbleweed.img 10G
-$ sudo losetup --show -f build/elemental-tumbleweed.img # make a not of the device-name
+$ sudo losetup --show -f build/elemental-tumbleweed.img # make a note of the device-name
 $ sudo ./build/elemental3-toolkit install --os-image=elemental-tumbleweed:latest --config=examples/tumbleweed/config.sh --target /dev/loopX # use the loopback-device printed in previous step.
 $ sudo losetup -d /dev/loopX
 ```
