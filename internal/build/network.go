@@ -30,7 +30,7 @@ import (
 //go:embed templates/network.sh.tpl
 var configureNetworkScript string
 
-const networkCustomScriptName = "configure-network.sh"
+const networkConfigScriptName = "configure-network.sh"
 
 // configureNetwork configures the network component if enabled.
 //
@@ -65,7 +65,7 @@ func (b *Builder) configureNetwork(def *image.Definition, buildDir image.BuildDi
 		return "", fmt.Errorf("creating elemental directory in overlays: %w", err)
 	}
 
-	relativeScriptPath := filepath.Join("/", image.ElementalPath(), networkCustomScriptName)
+	relativeScriptPath := filepath.Join("/", image.ElementalPath(), networkConfigScriptName)
 	fullScriptPath := filepath.Join(buildDir.OverlaysDir(), relativeScriptPath)
 
 	if def.Network.CustomScript != "" {
@@ -98,6 +98,7 @@ func (b *Builder) generateNetworkConfig(configDir, outputDir string) error {
 	return err
 }
 
+// TODO: Add cleanup mechanism in the script
 func (b *Builder) writeNetworkConfigurationScript(scriptPath, configDir string) error {
 	values := struct {
 		ConfigDir string
