@@ -183,7 +183,7 @@ qemu-kvm -m 16000 \
 
 ### Environment overview
 
-After booting the image and logging into it using the user specified under the `os.yaml` configuration file, let's view how the end environment looks like.
+After booting the image and logging into it using the user specified under the `os.yaml` configuration file, let's see what the environment looks like.
 
 1. Verify that the expected operating system is running:
 
