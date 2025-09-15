@@ -64,9 +64,9 @@ func NewHelm(fs vfs.FS, valuesResolver helmValuesResolver, logger log.Logger, de
 }
 
 func (h *Helm) Configure(def *image.Definition, rm *resolver.ResolvedManifest) ([]string, error) {
-	if len(def.Release.Components.Helm) > 0 {
+	if len(def.Release.Components.HelmCharts) > 0 {
 		var charts []string
-		for _, c := range def.Release.Components.Helm {
+		for _, c := range def.Release.Components.HelmCharts {
 			charts = append(charts, c.Name)
 		}
 
@@ -115,7 +115,7 @@ func (h *Helm) writeHelmCharts(crds []*helm.CRD) ([]string, error) {
 func (h *Helm) retrieveHelmCharts(rm *resolver.ResolvedManifest, def *image.Definition) ([]*helm.CRD, error) {
 	var crds []*helm.CRD
 
-	charts, repositories, err := h.enabledHelmCharts(rm, def.Release.Components.Helm)
+	charts, repositories, err := h.enabledHelmCharts(rm, def.Release.Components.HelmCharts)
 	if err != nil {
 		return nil, fmt.Errorf("filtering enabled helm charts: %w", err)
 	}

@@ -95,7 +95,7 @@ var _ = Describe("Kubernetes", func() {
 			def := &image.Definition{
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{
 								Name: "metallb",
 							},
@@ -111,7 +111,7 @@ var _ = Describe("Kubernetes", func() {
 			def := &image.Definition{
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{
 								Name: "rancher",
 							},
@@ -209,7 +209,7 @@ var _ = Describe("Kubernetes", func() {
 			def := &image.Definition{
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{
 								Name: "rancher",
 							},
@@ -255,7 +255,7 @@ var _ = Describe("Kubernetes", func() {
 				},
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{
 								Name: "rancher",
 							},

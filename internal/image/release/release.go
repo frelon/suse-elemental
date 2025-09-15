@@ -23,12 +23,12 @@ type Release struct {
 	Components  Components `yaml:"components,omitempty"`
 }
 type Components struct {
-	Helm []HelmChart `yaml:"helm"`
+	HelmCharts []HelmChart `yaml:"helm"`
 }
 
 func (c *Components) HelmValueFiles() map[string]string {
 	m := map[string]string{}
-	for _, chart := range c.Helm {
+	for _, chart := range c.HelmCharts {
 		m[chart.Name] = chart.ValuesFile
 	}
 

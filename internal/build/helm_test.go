@@ -76,7 +76,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 								},
 							},
 						},
-						Repositories: []api.Repository{
+						Repositories: []*api.HelmRepository{
 							{
 								Name: "suse-core",
 								URL:  "https://example.com/suse-core",
@@ -105,7 +105,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 								Repository: "rancher-charts",
 							},
 						},
-						Repositories: []api.Repository{
+						Repositories: []*api.HelmRepository{
 							{
 								Name: "rancher-charts",
 								URL:  "https://charts.rancher.io/",
@@ -121,7 +121,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			definition := &image.Definition{
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{
 								Name: "metallb", // chart in core release
 							},
@@ -143,7 +143,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			definition := &image.Definition{
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{
 								Name: "neuvector", // chart in product release
 							},
@@ -222,7 +222,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			definition := &image.Definition{
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{
 								Name: "rancher",
 							},
@@ -278,7 +278,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 			definition := &image.Definition{
 				Release: release.Release{
 					Components: release.Components{
-						Helm: []release.HelmChart{
+						HelmCharts: []release.HelmChart{
 							{Name: "metallb", ValuesFile: "metallb-values.yaml"},
 							{Name: "neuvector"},
 						},
@@ -419,7 +419,7 @@ spec:
 								DependsOn: []string{"longhorn-crd"},
 							},
 						},
-						Repositories: []api.Repository{
+						Repositories: []*api.HelmRepository{
 							{
 								Name: "suse-core",
 								URL:  "https://example.com/suse-core",
@@ -448,7 +448,7 @@ spec:
 								Repository: "rancher-charts",
 							},
 						},
-						Repositories: []api.Repository{
+						Repositories: []*api.HelmRepository{
 							{
 								Name: "rancher-charts",
 								URL:  "https://charts.rancher.io/",

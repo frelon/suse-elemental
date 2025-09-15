@@ -38,7 +38,7 @@ func needsManifestsSetup(def *image.Definition) bool {
 }
 
 func needsHelmChartsSetup(def *image.Definition) bool {
-	return (len(def.Release.Components.Helm) > 0) || def.Kubernetes.Helm != nil
+	return (len(def.Release.Components.HelmCharts) > 0) || def.Kubernetes.Helm != nil
 }
 
 func isKubernetesEnabled(def *image.Definition) bool {
