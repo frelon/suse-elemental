@@ -145,12 +145,12 @@ var _ = Describe("Resolver", Label("release-manifest"), func() {
 func validateResolvedManifest(rm *resolver.ResolvedManifest, coreOnly bool) {
 	Expect(rm.CorePlatform).ToNot(BeNil())
 
-	Expect(rm.CorePlatform.MetaData).ToNot(BeNil())
-	Expect(rm.CorePlatform.MetaData.Name).To(Equal("suse-core"))
-	Expect(rm.CorePlatform.MetaData.Version).To(Equal("1.0"))
-	Expect(len(rm.CorePlatform.MetaData.UpgradePathsFrom)).To(Equal(1))
-	Expect(rm.CorePlatform.MetaData.UpgradePathsFrom[0]).To(Equal("0.0.1"))
-	Expect(rm.CorePlatform.MetaData.CreationDate).To(Equal("2000-01-01"))
+	Expect(rm.CorePlatform.Metadata).ToNot(BeNil())
+	Expect(rm.CorePlatform.Metadata.Name).To(Equal("suse-core"))
+	Expect(rm.CorePlatform.Metadata.Version).To(Equal("1.0"))
+	Expect(len(rm.CorePlatform.Metadata.UpgradePathsFrom)).To(Equal(1))
+	Expect(rm.CorePlatform.Metadata.UpgradePathsFrom[0]).To(Equal("0.0.1"))
+	Expect(rm.CorePlatform.Metadata.CreationDate).To(Equal("2000-01-01"))
 
 	Expect(rm.CorePlatform.Components).ToNot(BeNil())
 	Expect(rm.CorePlatform.Components.OperatingSystem).ToNot(BeNil())
@@ -181,12 +181,12 @@ func validateResolvedManifest(rm *resolver.ResolvedManifest, coreOnly bool) {
 	if !coreOnly {
 		Expect(rm.ProductExtension).ToNot(BeNil())
 
-		Expect(rm.ProductExtension.MetaData).ToNot(BeNil())
-		Expect(rm.ProductExtension.MetaData.Name).To(Equal("suse-edge"))
-		Expect(rm.ProductExtension.MetaData.Version).To(Equal("3.2.0"))
-		Expect(len(rm.ProductExtension.MetaData.UpgradePathsFrom)).To(Equal(1))
-		Expect(rm.ProductExtension.MetaData.UpgradePathsFrom[0]).To(Equal("3.1.2"))
-		Expect(rm.ProductExtension.MetaData.CreationDate).To(Equal("2025-01-20"))
+		Expect(rm.ProductExtension.Metadata).ToNot(BeNil())
+		Expect(rm.ProductExtension.Metadata.Name).To(Equal("suse-edge"))
+		Expect(rm.ProductExtension.Metadata.Version).To(Equal("3.2.0"))
+		Expect(len(rm.ProductExtension.Metadata.UpgradePathsFrom)).To(Equal(1))
+		Expect(rm.ProductExtension.Metadata.UpgradePathsFrom[0]).To(Equal("3.1.2"))
+		Expect(rm.ProductExtension.Metadata.CreationDate).To(Equal("2025-01-20"))
 
 		Expect(rm.ProductExtension.CorePlatform).ToNot(BeNil())
 		Expect(rm.ProductExtension.CorePlatform.Image).To(Equal("foo.example.com/bar/release-manifest"))

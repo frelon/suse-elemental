@@ -21,7 +21,7 @@ import (
 	"github.com/suse/elemental/v3/pkg/helm"
 )
 
-type MetaData struct {
+type Metadata struct {
 	Name             string   `yaml:"name"`
 	Version          string   `yaml:"version"`
 	UpgradePathsFrom []string `yaml:"upgradePathsFrom,omitempty"`

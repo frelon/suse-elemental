@@ -54,12 +54,12 @@ var _ = Describe("ReleaseManifest", Label("release-manifest"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rm).ToNot(BeNil())
 
-		Expect(rm.MetaData).ToNot(BeNil())
-		Expect(rm.MetaData.Name).To(Equal("suse-core"))
-		Expect(rm.MetaData.Version).To(Equal("1.0"))
-		Expect(len(rm.MetaData.UpgradePathsFrom)).To(Equal(1))
-		Expect(rm.MetaData.UpgradePathsFrom[0]).To(Equal("0.0.1"))
-		Expect(rm.MetaData.CreationDate).To(Equal("2000-01-01"))
+		Expect(rm.Metadata).ToNot(BeNil())
+		Expect(rm.Metadata.Name).To(Equal("suse-core"))
+		Expect(rm.Metadata.Version).To(Equal("1.0"))
+		Expect(len(rm.Metadata.UpgradePathsFrom)).To(Equal(1))
+		Expect(rm.Metadata.UpgradePathsFrom[0]).To(Equal("0.0.1"))
+		Expect(rm.Metadata.CreationDate).To(Equal("2000-01-01"))
 
 		Expect(rm.Components).ToNot(BeNil())
 		Expect(rm.Components.OperatingSystem).ToNot(BeNil())

@@ -27,7 +27,7 @@ import (
 )
 
 type ReleaseManifest struct {
-	MetaData   *api.MetaData `yaml:"metadata"`
+	Metadata   *api.Metadata `yaml:"metadata"`
 	Components Components    `yaml:"components"`
 }
 
