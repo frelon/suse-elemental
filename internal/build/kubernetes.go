@@ -57,10 +57,6 @@ func (b *Builder) configureKubernetes(
 		return "", nil
 	}
 
-	if err = b.downloadRKE2(ctx, manifest, buildDir); err != nil {
-		return "", fmt.Errorf("downloading RKE2 extension: %w", err)
-	}
-
 	var runtimeHelmCharts []string
 	if needsHelmChartsSetup(def) {
 		b.System.Logger().Info("Configuring Helm charts")
@@ -89,20 +85,6 @@ func (b *Builder) configureKubernetes(
 	}
 
 	return k8sResourceScript, nil
-}
-
-func (b *Builder) downloadRKE2(ctx context.Context, manifest *resolver.ResolvedManifest, buildDir image.BuildDir) error {
-	extensionsDir := filepath.Join(buildDir.OverlaysDir(), image.ExtensionsPath())
-	if err := vfs.MkdirAll(b.System.FS(), extensionsDir, 0o700); err != nil {
-		return fmt.Errorf("creating extensions directory: %w", err)
-	}
-
-	rke2URL := manifest.CorePlatform.Components.Kubernetes.RKE2.Image
-	rke2ExtensionPath := filepath.Join(extensionsDir, filepath.Base(rke2URL))
-
-	b.System.Logger().Info("Downloading RKE2 extension %q...", rke2URL)
-
-	return b.DownloadFile(ctx, b.System.FS(), rke2URL, rke2ExtensionPath)
 }
 
 func (b *Builder) setupManifests(ctx context.Context, k *kubernetes.Kubernetes, buildDir image.BuildDir) (string, error) {

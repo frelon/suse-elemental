@@ -74,6 +74,11 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 		return err
 	}
 
+	if err = b.downloadSystemExtensions(ctx, m, &d.Release, buildDir); err != nil {
+		logger.Error("Downloading system extensions failed")
+		return err
+	}
+
 	logger.Info("Preparing configuration script")
 	configScript, err := writeConfigScript(fs, d, string(buildDir), networkScript, k8sScript)
 	if err != nil {

@@ -95,7 +95,7 @@ var _ = Describe("Helm tests", Label("helm"), func() {
 								Version:    "106.0.0+up2.8.5",
 								Namespace:  "neuvector-system",
 								Repository: "rancher-charts",
-								DependsOn:  []string{"neuvector-crd"},
+								DependsOn:  []api.HelmChartDependency{{Name: "neuvector-crd", Type: "helm"}},
 							},
 							{
 								Name:       "NeuVector CRD",
@@ -414,7 +414,7 @@ spec:
 								Namespace:  "longhorn",
 								Repository: "suse-core",
 								// Dependency intentionally missing from the charts list
-								DependsOn: []string{"longhorn-crd"},
+								DependsOn: []api.HelmChartDependency{{Name: "longhorn-crd", Type: "helm"}},
 							},
 						},
 						Repositories: []*api.HelmRepository{
@@ -436,7 +436,7 @@ spec:
 								Version:    "106.0.0+up2.8.5",
 								Namespace:  "neuvector-system",
 								Repository: "rancher-charts",
-								DependsOn:  []string{"neuvector-crd"},
+								DependsOn:  []api.HelmChartDependency{{Name: "neuvector-crd", Type: "helm"}},
 							},
 							{
 								Name:       "NeuVector CRD",
@@ -476,7 +476,10 @@ spec:
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
 			Expect(chart.Namespace).To(Equal("neuvector-system"))
 			Expect(chart.Repository).To(Equal("rancher-charts"))
-			Expect(chart.DependsOn).To(ConsistOf("neuvector-crd"))
+
+			Expect(chart.DependsOn).To(HaveLen(1))
+			Expect(chart.DependsOn[0].Name).To(Equal("neuvector-crd"))
+			Expect(chart.DependsOn[0].Type).To(BeEquivalentTo("helm"))
 
 			Expect(repositories["suse-core"]).To(Equal("https://example.com/suse-core"))
 			Expect(repositories["rancher-charts"]).To(Equal("https://charts.rancher.io/"))

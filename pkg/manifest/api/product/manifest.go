@@ -38,7 +38,8 @@ type CorePlatform struct {
 }
 
 type Components struct {
-	Helm *api.Helm `yaml:"helm,omitempty"`
+	Systemd api.Systemd `yaml:"systemd,omitempty"`
+	Helm    *api.Helm   `yaml:"helm,omitempty"`
 }
 
 func Parse(data []byte) (*ReleaseManifest, error) {

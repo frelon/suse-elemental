@@ -215,8 +215,10 @@ func enabledHelmCharts(rm *resolver.ResolvedManifest, enabled []release.HelmChar
 
 		// Check for dependencies and add them first.
 		for _, d := range chart.DependsOn {
-			if err := addChart(d); err != nil {
-				return fmt.Errorf("adding dependent helm chart '%s': %w", d, err)
+			if d.Type == api.DependencyTypeHelm {
+				if err := addChart(d.Name); err != nil {
+					return fmt.Errorf("adding dependent helm chart '%s': %w", d.Name, err)
+				}
 			}
 		}
 
