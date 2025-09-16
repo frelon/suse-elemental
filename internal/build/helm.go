@@ -115,55 +115,54 @@ func (h *Helm) writeHelmCharts(crds []*helm.CRD) ([]string, error) {
 func (h *Helm) retrieveHelmCharts(rm *resolver.ResolvedManifest, def *image.Definition) ([]*helm.CRD, error) {
 	var crds []*helm.CRD
 
-	charts, repositories, err := h.enabledHelmCharts(rm, def.Release.Components.HelmCharts)
+	charts, repositories, err := enabledHelmCharts(rm, def.Release.Components.HelmCharts, h.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("filtering enabled helm charts: %w", err)
 	}
 
-	if err = h.collectHelmCharts(charts, repositories, def.Release.Components.HelmValueFiles(), &crds); err != nil {
-		return nil, fmt.Errorf("collecting helm charts: %w", err)
+	valueFiles := def.Release.Components.HelmValueFiles()
+
+	for _, chart := range charts {
+		if err = h.appendHelmChart(chart, repositories, valueFiles, &crds); err != nil {
+			return nil, fmt.Errorf("collecting helm charts: %w", err)
+		}
 	}
 
 	if def.Kubernetes.Helm != nil {
-		var charts []helmChart
-		for _, chart := range def.Kubernetes.Helm.Charts {
-			charts = append(charts, chart)
-		}
+		repositories = def.Kubernetes.Helm.ChartRepositories()
+		valueFiles = def.Kubernetes.Helm.ValueFiles()
 
-		if err := h.collectHelmCharts(charts, def.Kubernetes.Helm.ChartRepositories(), def.Kubernetes.Helm.ValueFiles(), &crds); err != nil {
-			return nil, fmt.Errorf("collecting user helm charts: %w", err)
+		for _, chart := range def.Kubernetes.Helm.Charts {
+			if err = h.appendHelmChart(chart, repositories, valueFiles, &crds); err != nil {
+				return nil, fmt.Errorf("collecting user helm charts: %w", err)
+			}
 		}
 	}
 
 	return crds, nil
 }
 
-func (h *Helm) collectHelmCharts(charts []helmChart, repositories, valueFiles map[string]string, crds *[]*helm.CRD) error {
-	for _, chart := range charts {
-		name := chart.GetName()
-		repository, ok := repositories[chart.GetRepositoryName()]
-		if !ok {
-			return fmt.Errorf("repository not found for chart: %s", name)
-		}
-
-		source := &helm.ValueSource{Inline: chart.GetInlineValues(), File: valueFiles[name]}
-		values, err := h.ValuesResolver.Resolve(source)
-		if err != nil {
-			return fmt.Errorf("resolving values for chart %s: %w", name, err)
-		}
-
-		crd := chart.ToCRD(values, repository)
-		*crds = append(*crds, crd)
+func (h *Helm) appendHelmChart(chart helmChart, repositories, valueFiles map[string]string, crds *[]*helm.CRD) error {
+	name := chart.GetName()
+	repository, ok := repositories[chart.GetRepositoryName()]
+	if !ok {
+		return fmt.Errorf("repository not found for chart: %s", name)
 	}
+
+	source := &helm.ValueSource{Inline: chart.GetInlineValues(), File: valueFiles[name]}
+	values, err := h.ValuesResolver.Resolve(source)
+	if err != nil {
+		return fmt.Errorf("resolving values for chart %s: %w", name, err)
+	}
+
+	crd := chart.ToCRD(values, repository)
+	*crds = append(*crds, crd)
 
 	return nil
 }
 
-func (h *Helm) enabledHelmCharts(rm *resolver.ResolvedManifest, enabled []release.HelmChart) ([]helmChart, map[string]string, error) {
-	var charts []helmChart
-
-	coreCharts := map[string]*api.HelmChart{}
-	productCharts := map[string]*api.HelmChart{}
+func enabledHelmCharts(rm *resolver.ResolvedManifest, enabled []release.HelmChart, logger log.Logger) ([]*api.HelmChart, map[string]string, error) {
+	coreCharts, productCharts := map[string]*api.HelmChart{}, map[string]*api.HelmChart{}
 	repositories := map[string]string{}
 
 	if rm.CorePlatform.Components.Helm != nil {
@@ -186,11 +185,14 @@ func (h *Helm) enabledHelmCharts(rm *resolver.ResolvedManifest, enabled []releas
 		}
 	}
 
+	var charts []*api.HelmChart
 	var addChart func(name string) error
 
 	// Add a chart and its direct dependencies, avoiding duplicates.
 	// Prioritise charts from product releases over core ones.
 	addChart = func(name string) error {
+		source := "product"
+
 		chart, ok := productCharts[name]
 		if !ok {
 			chart, ok = coreCharts[name]
@@ -198,12 +200,14 @@ func (h *Helm) enabledHelmCharts(rm *resolver.ResolvedManifest, enabled []releas
 				return fmt.Errorf("helm chart does not exist")
 			}
 
-			h.Logger.Info("Using Helm chart %s from core release", name)
-		} else {
-			h.Logger.Info("Using Helm chart %s from product release", name)
+			source = "core"
 		}
 
-		if slices.ContainsFunc(charts, func(c helmChart) bool {
+		if logger != nil {
+			logger.Info("Using Helm chart %s from %s release", name, source)
+		}
+
+		if slices.ContainsFunc(charts, func(c *api.HelmChart) bool {
 			return c.GetName() == name
 		}) {
 			return nil

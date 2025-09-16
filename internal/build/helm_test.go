@@ -402,8 +402,6 @@ spec:
 	})
 
 	Describe("Filtering", func() {
-		h := &Helm{Logger: logger}
-
 		rm := &resolver.ResolvedManifest{
 			CorePlatform: &core.ReleaseManifest{
 				Components: core.Components{
@@ -460,19 +458,19 @@ spec:
 		}
 
 		It("Successfully filters enabled Helm charts with dependency", func() {
-			charts, repositories, err := h.enabledHelmCharts(rm, []release.HelmChart{{Name: "neuvector"}})
+			charts, repositories, err := enabledHelmCharts(rm, []release.HelmChart{{Name: "neuvector"}}, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(charts).To(HaveLen(2))
 			Expect(repositories).To(HaveLen(2))
 
-			chart := charts[0].(*api.HelmChart)
+			chart := charts[0]
 			Expect(chart.Name).To(Equal("NeuVector CRD"))
 			Expect(chart.Chart).To(Equal("neuvector-crd"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
 			Expect(chart.Namespace).To(Equal("neuvector-system"))
 			Expect(chart.Repository).To(Equal("rancher-charts"))
 
-			chart = charts[1].(*api.HelmChart)
+			chart = charts[1]
 			Expect(chart.Name).To(Equal("NeuVector"))
 			Expect(chart.Chart).To(Equal("neuvector"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
@@ -485,12 +483,12 @@ spec:
 		})
 
 		It("Successfully filters enabled Helm chart", func() {
-			charts, repositories, err := h.enabledHelmCharts(rm, []release.HelmChart{{Name: "neuvector-crd"}})
+			charts, repositories, err := enabledHelmCharts(rm, []release.HelmChart{{Name: "neuvector-crd"}}, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(charts).To(HaveLen(1))
 			Expect(repositories).To(HaveLen(2))
 
-			chart := charts[0].(*api.HelmChart)
+			chart := charts[0]
 			Expect(chart.Name).To(Equal("NeuVector CRD"))
 			Expect(chart.Chart).To(Equal("neuvector-crd"))
 			Expect(chart.Version).To(Equal("106.0.0+up2.8.5"))
@@ -503,7 +501,7 @@ spec:
 		})
 
 		It("Fails to find non-existing enabled Helm chart", func() {
-			charts, repositories, err := h.enabledHelmCharts(rm, []release.HelmChart{{Name: "rancher"}})
+			charts, repositories, err := enabledHelmCharts(rm, []release.HelmChart{{Name: "rancher"}}, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("adding helm chart 'rancher': helm chart does not exist"))
 			Expect(charts).To(BeNil())
@@ -511,7 +509,7 @@ spec:
 		})
 
 		It("Fails to find non-existing dependency Helm chart", func() {
-			charts, repositories, err := h.enabledHelmCharts(rm, []release.HelmChart{{Name: "longhorn"}})
+			charts, repositories, err := enabledHelmCharts(rm, []release.HelmChart{{Name: "longhorn"}}, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("adding helm chart 'longhorn': adding dependent helm chart 'longhorn-crd': helm chart does not exist"))
 			Expect(charts).To(BeNil())
