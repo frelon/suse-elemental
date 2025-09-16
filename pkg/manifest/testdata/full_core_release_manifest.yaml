@@ -23,10 +23,6 @@ components:
   operatingSystem:
     version: "6.2"
     image: "registry.com/foo/bar/sl-micro:6.2"
-  kubernetes:
-    rke2:
-      version: "1.32"
-      image: "registry.com/foo/bar/rke2:1.32"
   systemd:
     extensions:
       - name: "elemental3ctl"

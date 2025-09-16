@@ -157,11 +157,6 @@ func validateResolvedManifest(rm *resolver.ResolvedManifest, coreOnly bool) {
 	Expect(rm.CorePlatform.Components.OperatingSystem.Version).To(Equal("6.2"))
 	Expect(rm.CorePlatform.Components.OperatingSystem.Image).To(Equal("registry.com/foo/bar/sl-micro:6.2"))
 
-	Expect(rm.CorePlatform.Components.Kubernetes).ToNot(BeNil())
-	Expect(rm.CorePlatform.Components.Kubernetes.RKE2).ToNot(BeNil())
-	Expect(rm.CorePlatform.Components.Kubernetes.RKE2.Version).To(Equal("1.32"))
-	Expect(rm.CorePlatform.Components.Kubernetes.RKE2.Image).To(Equal("registry.com/foo/bar/rke2:1.32"))
-
 	Expect(rm.CorePlatform.Components.Systemd.Extensions).To(HaveLen(2))
 	Expect(rm.CorePlatform.Components.Systemd.Extensions[0].Name).To(Equal("elemental3ctl"))
 	Expect(rm.CorePlatform.Components.Systemd.Extensions[0].Image).To(Equal("https://example.com/elemental3ctl_0.0.raw"))
