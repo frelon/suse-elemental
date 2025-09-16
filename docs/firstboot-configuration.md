@@ -12,7 +12,7 @@ to be read-write, such as `/etc` or `/var`. The default subvolume is a btrfs rea
 regardless of mounting it with or without read-write capabilities, the filesystem will prevent any write
 in there causing a failure in any attempt.
 
-Default read-write subvolumes for unified core images are:
+Default read-write subvolumes for `elemental3ctl` installations are:
 
 * /var
 * /root
@@ -127,8 +127,7 @@ files into the system and handling systemd services. Find full documentation abo
       {
         "name": "pipo",
         "passwordHash": "$6$6RmQVwdZ3p0TLx8t$e1RdFSCTNIJRe9fDGnssaQIrTblBbApEE8PCu4FGS/1/PToT9g/GDT05RSF.Ijm6wKs8m3mApYPMw/.oUc0MS0",
-        "system": false,
-        "noCreateHome": true
+        "system": false
       }
     ]
   },
@@ -160,10 +159,21 @@ files into the system and handling systemd services. Find full documentation abo
         "overwrite": true
       }
     ],
+    "filesystems": [
+      {
+        "path": "/home",
+        "device": "/dev/disk/by-label/SYSTEM",
+        "format": "btrfs",
+        "mountOptions": ["subvol=/@/home"],
+        "wipeFilesystem": false
+      }
+    ]
   }
 }
 ```
 
-Note the `pipo` user is added with the `noCreateHome` parameter, that is because `/home`, by default, is not including
-the `x-initrd.mount` option in its volume definition, meaning it is not mounted at the time ignition is executed and
-that `/home` is a RO filesystem.
+Note the `pipo` user is added as a regular user, hence Ignition will create a `/home/pipo` folder. This is would not be possible
+without additional configuration becuase by default `/home` subvolume is no including the `x-initrd.mount` option in fstab
+and so that it is not mounted in initrd phases. To workaround this issue without customizing the installation Ignition can be
+instructed to mount filesystems, this is in fact, the purpose of the `filesystems` list in the above example. Note that under
+`filesystems` the `/home` mount point is defined with the appropriate mount options.
