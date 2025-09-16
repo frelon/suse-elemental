@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/release"
 	"github.com/suse/elemental/v3/pkg/manifest/api"
 	"github.com/suse/elemental/v3/pkg/manifest/api/core"
@@ -52,17 +53,19 @@ var _ = Describe("Systemd extensions", func() {
 				},
 			}
 
-			r := &release.Release{
-				Components: release.Components{
-					HelmCharts: []release.HelmChart{
-						{
-							Name: "longhorn",
+			def := &image.Definition{
+				Release: release.Release{
+					Components: release.Components{
+						HelmCharts: []release.HelmChart{
+							{
+								Name: "longhorn",
+							},
 						},
 					},
 				},
 			}
 
-			extensions, err := enabledExtensions(rm, r)
+			extensions, err := enabledExtensions(rm, def)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(MatchRegexp("filtering enabled helm charts: adding helm chart 'longhorn': " +
 				"adding dependent helm chart 'longhorn-crd': helm chart does not exist")))
@@ -130,32 +133,31 @@ var _ = Describe("Systemd extensions", func() {
 				},
 			}
 
-			r := &release.Release{
-				Components: release.Components{
-					SystemdExtensions: []release.SystemdExtension{
-						{
-							Name: "rke2",
+			def := &image.Definition{
+				Release: release.Release{
+					Components: release.Components{
+						SystemdExtensions: []release.SystemdExtension{
+							{
+								Name: "nvidia-toolkit",
+							},
 						},
-						{
-							Name: "nvidia-toolkit",
-						},
-					},
-					HelmCharts: []release.HelmChart{
-						{
-							Name: "longhorn", // Automatically includes the longhorn extension as a dependency
+						HelmCharts: []release.HelmChart{
+							{
+								Name: "longhorn",
+							},
 						},
 					},
 				},
 			}
 
-			extensions, err := enabledExtensions(rm, r)
+			extensions, err := enabledExtensions(rm, def)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(extensions).To(HaveLen(4))
 
-			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "elemental3ctl", Image: "https://example.com/elemental3ctl.raw", Required: true}))
-			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "rke2", Image: "https://example.com/rke2.raw"}))
-			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "longhorn", Image: "https://example.com/longhorn.raw"}))
-			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "nvidia-toolkit", Image: "https://example.com/nvidia-toolkit.raw"}))
+			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "elemental3ctl", Image: "https://example.com/elemental3ctl.raw", Required: true}), "Required by release")
+			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "rke2", Image: "https://example.com/rke2.raw"}), "Required as per Helm chart enablement")
+			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "longhorn", Image: "https://example.com/longhorn.raw"}), "Required as a dependency of enabled Helm chart")
+			Expect(extensions).To(ContainElement(api.SystemdExtension{Name: "nvidia-toolkit", Image: "https://example.com/nvidia-toolkit.raw"}), "Explicitly requested")
 		})
 	})
 })

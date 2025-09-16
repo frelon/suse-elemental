@@ -30,6 +30,8 @@ import (
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
 )
 
+const k8sExtension = "rke2"
+
 //go:embed templates/k8s_res_deploy.sh.tpl
 var k8sResDeployScriptTpl string
 
@@ -42,7 +44,7 @@ func needsHelmChartsSetup(def *image.Definition) bool {
 }
 
 func isKubernetesEnabled(def *image.Definition) bool {
-	return needsHelmChartsSetup(def) || needsManifestsSetup(def)
+	return isExtensionExplicitlyEnabled(k8sExtension, def) || needsHelmChartsSetup(def) || needsManifestsSetup(def)
 }
 
 func (b *Builder) configureKubernetes(

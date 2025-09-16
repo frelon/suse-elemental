@@ -30,8 +30,8 @@ import (
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
 )
 
-func (b *Builder) downloadSystemExtensions(ctx context.Context, rm *resolver.ResolvedManifest, r *release.Release, buildDir image.BuildDir) error {
-	extensions, err := enabledExtensions(rm, r)
+func (b *Builder) downloadSystemExtensions(ctx context.Context, def *image.Definition, rm *resolver.ResolvedManifest, buildDir image.BuildDir) error {
+	extensions, err := enabledExtensions(rm, def)
 	if err != nil {
 		return fmt.Errorf("filtering enabled systemd extensions: %w", err)
 	} else if len(extensions) == 0 {
@@ -59,22 +59,22 @@ func (b *Builder) downloadSystemExtensions(ctx context.Context, rm *resolver.Res
 	return nil
 }
 
-func isExtensionExplicitlyEnabled(name string, r *release.Release) bool {
-	return slices.ContainsFunc(r.Components.SystemdExtensions, func(e release.SystemdExtension) bool {
+func isExtensionExplicitlyEnabled(name string, def *image.Definition) bool {
+	return slices.ContainsFunc(def.Release.Components.SystemdExtensions, func(e release.SystemdExtension) bool {
 		return e.Name == name
 	})
 }
 
-func enabledExtensions(rm *resolver.ResolvedManifest, r *release.Release) ([]api.SystemdExtension, error) {
-	charts, _, err := enabledHelmCharts(rm, r.Components.HelmCharts, nil)
+func enabledExtensions(rm *resolver.ResolvedManifest, def *image.Definition) ([]api.SystemdExtension, error) {
+	charts, _, err := enabledHelmCharts(rm, def.Release.Components.HelmCharts, nil)
 	if err != nil {
 		return nil, fmt.Errorf("filtering enabled helm charts: %w", err)
 	}
 
-	isDependency := func(name string) bool {
+	isDependency := func(extension string) bool {
 		return slices.ContainsFunc(charts, func(c *api.HelmChart) bool {
 			return slices.ContainsFunc(c.ExtensionDependencies(), func(dependency string) bool {
-				return dependency == name
+				return dependency == extension
 			})
 		})
 	}
@@ -87,7 +87,10 @@ func enabledExtensions(rm *resolver.ResolvedManifest, r *release.Release) ([]api
 	}
 
 	for _, ext := range all {
-		if ext.Required || isExtensionExplicitlyEnabled(ext.Name, r) || isDependency(ext.Name) {
+		if ext.Required ||
+			isExtensionExplicitlyEnabled(ext.Name, def) ||
+			(ext.Name == k8sExtension && isKubernetesEnabled(def)) ||
+			isDependency(ext.Name) {
 			enabled = append(enabled, ext)
 		}
 	}

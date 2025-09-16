@@ -74,7 +74,7 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 		return err
 	}
 
-	if err = b.downloadSystemExtensions(ctx, m, &d.Release, buildDir); err != nil {
+	if err = b.downloadSystemExtensions(ctx, d, m, buildDir); err != nil {
 		logger.Error("Downloading system extensions failed")
 		return err
 	}

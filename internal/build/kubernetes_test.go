@@ -230,7 +230,17 @@ var _ = Describe("Kubernetes", func() {
 			}
 
 			manifest := &resolver.ResolvedManifest{}
-			def := &image.Definition{}
+			def := &image.Definition{
+				Release: release.Release{
+					Components: release.Components{
+						SystemdExtensions: []release.SystemdExtension{
+							{
+								Name: "rke2",
+							},
+						},
+					},
+				},
+			}
 
 			script, err := builder.configureKubernetes(context.Background(), def, manifest, buildDir)
 			Expect(err).NotTo(HaveOccurred())
