@@ -4,7 +4,7 @@ This section provides an overview of how to configure the OS at firstboot.
 
 ## The runtime context
 
-Unified Core images crafted by elemental3ctl include, by default, two partitions, an ESP partition
+Unified Core images crafted by `elemental3ctl` include, by default, two partitions, an ESP partition
 (bootloader, kernel and initrd) and a Linux partition (the OS itself). The OS partition is a btrfs
 partition including several subvolumes where there is the default read-only subvolume mounted as the
 root device and a list of read-write subvolumes which are mounted in paths that are expected or required
@@ -22,12 +22,12 @@ Default read-write subvolumes for unified core images are:
 * /home
 
 The only subvolumes that are mounted in early boot inside initrd before switching root are `/etc`, `/root`
-and `/var`. This is relevant for fist boot configuration as these are the subvolumes that tools such as
+and `/var`. This is relevant for first boot configuration as these are the subvolumes that tools such as
 Ignition are capable of modifying at boot time. Those are the subvolumes that include the `x-initrd.mount`
 option in `/etc/fstab` file, stating those are mounted before switching root.
 
 Despite this defaults elemental3ctl is capable of setting additional partitions and different subvolumes.
-Elemental3ctl supports installation parameters provided by a yaml file, the default disk setup is
+`elemental3ctl` supports installation parameters provided by a yaml file, the default disk setup is
 equivalent to the following one:
 
 ```yaml
@@ -58,7 +58,7 @@ disks:
 ```
 
 Which could be adapted to include an additional partition by adding another item into the partitions
-list. Adding an Ingition partition of 512MiB could done with:
+list. Adding an Ignition partition of 512MiB could done with:
 
 ```yaml
 disks:
@@ -96,7 +96,7 @@ disks:
 
 ## Configuring via Ignition
 
-Ignition is functional and supported in SUSE Micro 6.2, however it comes with certain constraints when this
+Ignition is functional and supported in SUSE Linux Micro, however it comes with certain constraints when this
 is used in conjunction to an image based (also referred as immutable) OS. Most noticeable aspect is that the
 root volume, despite ignition attempts to remount it as a read-write, is still sealed and operating in read-only
 mode. In practice this essentially means that changes over the RO areas of the system are forbidden and any
