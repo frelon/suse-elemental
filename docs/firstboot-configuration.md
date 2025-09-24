@@ -108,6 +108,14 @@ volume with a filesystem labeled `IGNITION` (not key sensitive), containing a co
 `/ignition/config.ign` path. This can be achieved by adding an extra block device,
 such as a USB stick, to the machine, or by installing a system including a partition with a filesystem labeled as `IGNITION`.
 
+### Specific non supported Ignition features
+
+There are some Ignition non supported features in Elemental based systems.
+
+* `kernelArguments` configuration is not functional as it requires a specific grub2 configuration which is not
+  aligned with today's bootlodaer configuration provided by `elemental3ctl`. Adaptations on the bootloader setup and/or in
+  `ignition-kargs-helper` script of Ignition's package would be required.
+
 ### Ignition configuration example
 
 The configuration example below demonstrates the common use cases of Ignition, such as configuring users, dropping
