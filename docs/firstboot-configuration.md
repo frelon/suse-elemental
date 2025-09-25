@@ -4,9 +4,10 @@ This section provides an overview of how to configure the OS at firstboot.
 
 ## The runtime context
 
-Unified Core images crafted by `elemental3ctl` include, by default, two partitions, an ESP partition
-(bootloader, kernel and initrd) and a Linux partition (the OS itself). The OS partition is a btrfs
-partition including several subvolumes where there is the default read-only subvolume mounted as the
+By default, `elemental3ctl` creates two partitions for its operating system images: an ESP partition
+
+(bootloader, kernel and initrd) and a Linux partition (the OS itself). The Linux partition is a btrfs
+file system including several subvolumes where there is the default read-only subvolume mounted as the
 root device and a list of read-write subvolumes which are mounted in paths that are expected or required
 to be read-write, such as `/etc` or `/var`. The default subvolume is a btrfs read-only subvolume so
 regardless of mounting it with or without read-write capabilities, the filesystem will prevent any write
@@ -26,7 +27,7 @@ and `/var`. This is relevant for first boot configuration as these are the subvo
 Ignition are capable of modifying at boot time. Those are the subvolumes that include the `x-initrd.mount`
 option in `/etc/fstab` file, stating those are mounted before switching root.
 
-Despite this defaults elemental3ctl is capable of setting additional partitions and different subvolumes.
+`elemental3ctl` can create additional partitions and different subvolumes beyond the default settings.
 `elemental3ctl` supports installation parameters provided by a yaml file, the default disk setup is
 equivalent to the following one:
 
@@ -96,7 +97,7 @@ disks:
 
 ## Configuring via Ignition
 
-Ignition is functional and supported in SUSE Linux Micro, however it comes with certain constraints when this
+SUSE Linux Micro's Ignition comes with certain constraints when this
 is used in conjunction to an image based (also referred as immutable) OS. Most noticeable aspect is that the
 root volume, despite ignition attempts to remount it as a read-write, is still sealed and operating in read-only
 mode. In practice this essentially means that changes over the RO areas of the system are forbidden and any
@@ -181,7 +182,7 @@ files into the system and handling systemd services. Find full documentation abo
 ```
 
 Note the `pipo` user is added as a regular user, hence Ignition will create a `/home/pipo` folder. This is would not be possible
-without additional configuration becuase by default `/home` subvolume is no including the `x-initrd.mount` option in fstab
+without additional configuration because by default `/home` subvolume is no including the `x-initrd.mount` option in fstab
 and so that it is not mounted in initrd phases. To workaround this issue without customizing the installation Ignition can be
 instructed to mount filesystems, this is in fact, the purpose of the `filesystems` list in the above example. Note that under
 `filesystems` the `/home` mount point is defined with the appropriate mount options.
