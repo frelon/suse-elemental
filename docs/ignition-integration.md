@@ -1,6 +1,6 @@
-# Firstboot OS Configuration
+# Elemental and Ignition Integration
 
-This section provides an overview of how to configure the OS at firstboot.
+This section provides an overview of how to configure the OS at firstboot with Ignition.
 
 ## The runtime context
 
@@ -15,12 +15,12 @@ in there causing a failure in any attempt.
 
 Default read-write subvolumes for `elemental3ctl` installations are:
 
-* /var
-* /root
-* /etc
-* /opt
-* /srv
-* /home
+* `/var`
+* `/root`
+* `/etc`
+* `/opt`
+* `/srv`
+* `/home`
 
 The only subvolumes that are mounted in early boot inside initrd before switching root are `/etc`, `/root`
 and `/var`. This is relevant for first boot configuration as these are the subvolumes that tools such as
@@ -183,6 +183,6 @@ files into the system and handling systemd services. Find full documentation abo
 
 Note the `pipo` user is added as a regular user, hence Ignition will create a `/home/pipo` folder. This is would not be possible
 without additional configuration because by default `/home` subvolume is no including the `x-initrd.mount` option in fstab
-and so that it is not mounted in initrd phases. To workaround this issue without customizing the installation Ignition can be
-instructed to mount filesystems, this is in fact, the purpose of the `filesystems` list in the above example. Note that under
+and so that it is not mounted in initrd phases. To workaround this issue without customizing the installation, you can instruct
+Ignition to mount filesystems, this is in fact, the purpose of the `filesystems` list in the above example. Note that under
 `filesystems` the `/home` mount point is defined with the appropriate mount options.
