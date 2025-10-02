@@ -230,7 +230,7 @@ func initSnapperInstall(root string) transaction.UpgradeHelper {
 	sideEffects["lsblk"] = func(args ...string) ([]byte, error) {
 		return []byte(lsblkJson), nil
 	}
-	sn = transaction.NewSnapperTransaction(ctx, s)
+	sn = transaction.NewSnapper(ctx, s)
 	upgradeH, err := sn.Init(*d)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(runner.CmdsMatch([][]string{
@@ -252,7 +252,7 @@ func initSnapperUpgrade(root string) transaction.UpgradeHelper {
 	sideEffects["lsblk"] = func(args ...string) ([]byte, error) {
 		return []byte(lsblkJson), nil
 	}
-	sn = transaction.NewSnapperTransaction(ctx, s)
+	sn = transaction.NewSnapper(ctx, s)
 	upgradeH, err := sn.Init(*d)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(runner.CmdsMatch([][]string{
