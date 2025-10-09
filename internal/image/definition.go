@@ -26,6 +26,8 @@ import (
 )
 
 const (
+	CNITypeCilium = "cilium"
+
 	TypeRAW = "raw"
 )
 
