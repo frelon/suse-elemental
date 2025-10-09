@@ -109,6 +109,8 @@ volume with a filesystem labeled `IGNITION` (not key sensitive), containing a co
 `/ignition/config.ign` path. This can be achieved by adding an extra block device,
 such as a USB stick, to the machine, or by installing a system including a partition with a filesystem labeled as `IGNITION`.
 
+More specific details of the SUSE Linux Micro's Ignition can be found in the [downstream repository](https://src.opensuse.org/SLFO-pool/ignition#readme).
+
 ### Specific non supported Ignition features
 
 There are some Ignition non supported features in Elemental based systems.

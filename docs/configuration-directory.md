@@ -57,26 +57,36 @@ The `install.yaml` file enables users to configure the OS installation process b
 ```yaml
 bootloader: grub
 kernelCmdLine: "root=LABEL=SYSTEM console=ttyS0"
+diskSize: 35G
 ```
 
 * `bootloader` - Required; Specifies the bootloader that will load the operating system.
 * `kernelCmdLine` - Required; Parameters to add to the kernel when the operating system boots up.
+* `diskSize` - Required; Specifies the size of the resulting disk image.
 
-### os.yaml
+### butane.yaml
 
-The `os.yaml` file enables users to configure the actual operating system by introducing the following API:
+The `butane.yaml` optional file enables users to configure the actual operating system by allowing them to provide their own [Butane](https://coreos.github.io/butane/) configuration.
+During the build this will be translated into an [Ignition](https://coreos.github.io/ignition/) configuration which will be included into the image and executed at first boot.
+The example below shows how it can be used to setup users:
 
 ```yaml
-diskSize: 35G
-users:
-  - username: root
-    password: linux
+version: 1.1.0
+variant: flatcar
+passwd:
+  users:
+  - name: root
+    # Hash for 'linux' passwd created with "openssl passwd -6"
+    password_hash: "$6$dkiCjuXvS8brdFUA$w1b4wSV.0wQ7BmZ7l/Be6fhqlk8CMEE8NQkhtaXIPjMTFw90JNYfI1lBhSoUILhmqupcmOp681FHIdvIZdbc90"
 ```
 
-* `diskSize` - Optional; Defines the size of the disk for the image that will be built. Defaults to `10G`.
-* `users` - Required to have at least one; Defines users to be added to the operating system.
-  * `username` - Required; Name of the user that needs to be added.
-  * `password` - Required; Password for the user that needs to be added.
+Elemental does not enforce or prefer any specific Butane variant.
+
+Check [Elemental and Ignition Integration](./ignition-integration.md) for further details about Ignition being used in the scope of Elemental.
+
+> [!NOTE]
+> The inclusion of an external Butane configuration file is not considered to be an stable part of the Elemental user interface. Butane configuration
+> could be surperseded by a native Elemental declaration in the future.
 
 ## Kubernetes
 

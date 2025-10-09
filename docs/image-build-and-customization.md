@@ -78,7 +78,7 @@ This section provides a high-level overview of the steps that Elemental's toolin
    1. Prepare Helm charts and Kubernetes manifests
    2. Download the RKE2 extension image, as specified in the parsed core platform release manifest.
 6. Begin the OS installation process:
-   1. Create a new disk image with size as defined in `os.yaml` and type as specified by the user.
+   1. Create a new disk image with size as defined in `install.yaml` and type as specified by the user.
    2. Attach a loop device to the newly created image.
    3. Partition loop device and start a btrfs snapshotter transaction.
    4. Unpack the base operating system image that was defined in the parsed core platform release manifest.
@@ -112,8 +112,8 @@ The user creates a [configuration directory](../examples/elemental/build/) that 
 
 The contents of this directory include:
 
-* [install.yaml](../examples/elemental/build/install.yaml) - specify which `bootloader` and `kernel command line` arguments to use during the OS installation process.
-* [os.yaml](../examples/elemental/build/os.yaml) - specify `users` that the OS should have and the `disk size` of the built image.
+* [install.yaml](../examples/elemental/build/install.yaml) - specify which `bootloader` and `kernel command line` arguments to use during the OS installation process and to define the actual `disk size` of the image.
+* [butane.yaml](../examples/elemental/build/butane.yaml) - specify an optional [butane](https://coreos.github.io/butane/) configuration yaml to include as part of the firstboot configuration.
 * [kubernetes.yaml](../examples/elemental/build/kubernetes.yaml) - specify the Helm charts and Kubernetes manifests that the user wishes to deploy as part of their use case.
 * [release.yaml](../examples/elemental/build/release.yaml) - specify the reference to the user desired product and enable the necessary Helm chart components.
 * [suse-product-manifest.yaml](../examples/elemental/build/suse-product-manifest.yaml) - the release manifest for the desired product that the user has referred in the `release.yaml` configuration file.
@@ -141,7 +141,7 @@ After execution, your `examples/elemental/build` directory should look similar t
 ├── kubernetes/
 ├── kubernetes.yaml
 ├── network/
-├── os.yaml
+├── butane.yaml
 ├── release.yaml
 └── suse-product-manifest.yaml
 ```
@@ -184,7 +184,7 @@ qemu-kvm -m 16000 \
 
 ### Environment overview
 
-After booting the image and logging into it using the user specified under the `os.yaml` configuration file, let's view what the end environment looks like.
+After booting the image and logging into it using the user specified under the `butane.yaml` configuration file, let's view what the end environment looks like.
 
 1. Verify that the expected operating system is running:
 
