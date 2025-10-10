@@ -28,11 +28,11 @@ import (
 )
 
 const (
-	ensureSysextUnitName = "systemd-sysext.service"
+	ensureSysextUnitName = "ensure-sysext.service"
 	k8sResourcesUnitName = "k8s-resource-installer.service"
 )
 
-//go:embed templates/systemd-sysext.service
+//go:embed templates/ensure-sysext.service
 var ensureSysextUnit string
 
 //go:embed templates/k8s-resource-installer.service.tpl
