@@ -90,7 +90,6 @@ build-disk: $(BUILD_DIR) elemental-image
 		--volume $(DOCKER_SOCK):$(DOCKER_SOCK) \
 		--volume $(BUILD_DIR):/build \
 		--volume /dev:/dev \
-		--volume /run/udev:/run/udev:ro \
 		--privileged \
 		$(ELEMENTAL_IMAGE_REPO):$(VERSION) \
 		--debug install --os-image $(OS_REPO):$(OS_VERSION) --target $${TARGET} --cmdline "console=ttyS0,115200" --config /build/config.sh

@@ -45,4 +45,7 @@ RUN ARCH=$(uname -m); \
 COPY --from=builder /work/build/elemental3ctl /usr/bin/elemental3ctl
 COPY --from=builder /work/build/elemental3 /usr/bin/elemental3
 
+# Fix for blkid only using udev on opensuse
+RUN echo "EVALUATE=scan" >> /etc/blkid.conf
+
 ENTRYPOINT ["/usr/bin/elemental3ctl"]
