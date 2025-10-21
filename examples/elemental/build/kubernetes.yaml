@@ -1,5 +1,13 @@
 manifests:
   - https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml
+nodes:
+- hostname: node1.suse.com
+  type: server
+- hostname: node2.suse.com
+  type: agent
+network:
+    apiVIP: 10.0.2.15
+    apiHost: 10.0.2.15.sslip.io
 helm:
   charts:
     - name: "neuvector-crd"
