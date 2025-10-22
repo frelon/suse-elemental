@@ -37,13 +37,12 @@ import (
 )
 
 const (
-	initServerConfigFile = "init_server.yaml"
-	serverConfigFile     = "server.yaml"
-	agentConfigFile      = "agent.yaml"
+	serverConfigFile = "server.yaml"
+	agentConfigFile  = "agent.yaml"
 
 	tokenKey        = "token"
 	cniKey          = "cni"
-	cniDefaultValue = image.CNITypeCilium
+	cniDefaultValue = image.CNITypeCanal
 	serverKey       = "server"
 	tlsSANKey       = "tls-san"
 	disableKey      = "disable"
