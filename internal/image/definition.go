@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	CNITypeCanal  = "canal"
 	CNITypeCilium = "cilium"
 
 	TypeRAW = "raw"
