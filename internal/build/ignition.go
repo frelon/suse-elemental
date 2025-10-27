@@ -51,7 +51,7 @@ var k8sConfigUnitTpl string
 // configureIngition writes the ignition configuration file based on the provided butane configuration
 // and the given kubernetes configuration
 func (b *Builder) configureIgnition(def *image.Definition, buildDir image.BuildDir, k8sScript, k8sConfScript string) error {
-	if len(def.ButaneConfig) == 0 && k8sScript == "" {
+	if len(def.ButaneConfig) == 0 && k8sScript == "" && k8sConfScript == "" {
 		b.System.Logger().Info("No ignition configuration required")
 		return nil
 	}
