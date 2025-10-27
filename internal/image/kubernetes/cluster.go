@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package build
+package kubernetes
 
 import (
 	"errors"
@@ -30,8 +30,6 @@ import (
 	"github.com/google/uuid"
 	"go.yaml.in/yaml/v3"
 
-	"github.com/suse/elemental/v3/internal/image"
-	"github.com/suse/elemental/v3/internal/image/kubernetes"
 	"github.com/suse/elemental/v3/pkg/log"
 	"github.com/suse/elemental/v3/pkg/sys"
 )
@@ -40,14 +38,13 @@ const (
 	serverConfigFile = "server.yaml"
 	agentConfigFile  = "agent.yaml"
 
-	tokenKey        = "token"
-	cniKey          = "cni"
-	cniDefaultValue = image.CNITypeCanal
-	serverKey       = "server"
-	tlsSANKey       = "tls-san"
-	disableKey      = "disable"
-	clusterInitKey  = "cluster-init"
-	selinuxKey      = "selinux"
+	tokenKey       = "token"
+	cniKey         = "cni"
+	serverKey      = "server"
+	tlsSANKey      = "tls-san"
+	disableKey     = "disable"
+	clusterInitKey = "cluster-init"
+	selinuxKey     = "selinux"
 )
 
 type Cluster struct {
@@ -58,7 +55,7 @@ type Cluster struct {
 	AgentConfig map[string]any
 }
 
-func NewCluster(s *sys.System, kube *kubernetes.Kubernetes, configPath string) (*Cluster, error) {
+func NewCluster(s *sys.System, kube *Kubernetes, configPath string) (*Cluster, error) {
 	serverConfigPath := filepath.Join(configPath, serverConfigFile)
 	serverConfig, err := ParseKubernetesConfig(s.Logger(), serverConfigPath)
 	if err != nil {
@@ -139,9 +136,7 @@ func ParseKubernetesConfig(logger log.Logger, configFile string) (map[string]any
 	return config, nil
 }
 
-func setSingleNodeConfigDefaults(logger log.Logger, kube *kubernetes.Kubernetes, config map[string]any) {
-	setClusterCNI(logger, config)
-
+func setSingleNodeConfigDefaults(logger log.Logger, kube *Kubernetes, config map[string]any) {
 	if kube.Network.APIVIP4 != "" {
 		appendClusterTLSSAN(logger, config, kube.Network.APIVIP4)
 	}
@@ -156,15 +151,13 @@ func setSingleNodeConfigDefaults(logger log.Logger, kube *kubernetes.Kubernetes,
 	delete(config, serverKey)
 }
 
-func setMultiNodeConfigDefaults(logger log.Logger, kube *kubernetes.Kubernetes, config map[string]any, ip4 netip.Addr, ip6 netip.Addr, prioritizeIPv6 bool) error {
+func setMultiNodeConfigDefaults(logger log.Logger, kube *Kubernetes, config map[string]any, ip4 netip.Addr, ip6 netip.Addr, prioritizeIPv6 bool) error {
 	const rke2ServerPort = 9345
 
 	err := setClusterAPIAddress(config, ip4, ip6, rke2ServerPort, prioritizeIPv6)
 	if err != nil {
 		return err
 	}
-
-	setClusterCNI(logger, config)
 
 	setClusterToken(logger, config)
 	if kube.Network.APIVIP4 != "" {
@@ -192,16 +185,6 @@ func setClusterToken(logger log.Logger, config map[string]any) {
 
 	logger.Info("Generated cluster token: %s", token)
 	config[tokenKey] = token
-}
-
-func setClusterCNI(logger log.Logger, config map[string]any) {
-	if _, ok := config[cniKey]; ok {
-		return
-	}
-
-	logger.Info("CNI not set in config file, proceeding with CNI: %s", cniDefaultValue)
-
-	config[cniKey] = cniDefaultValue
 }
 
 func setClusterAPIAddress(config map[string]any, ip4 netip.Addr, ip6 netip.Addr, port uint16, prioritizeIPv6 bool) error {
@@ -259,11 +242,11 @@ func appendClusterTLSSAN(logger log.Logger, config map[string]any, address strin
 	}
 }
 
-func ServersCount(nodes kubernetes.Nodes) int {
+func ServersCount(nodes Nodes) int {
 	var servers int
 
 	for _, node := range nodes {
-		if node.Type == kubernetes.NodeTypeServer {
+		if node.Type == NodeTypeServer {
 			servers++
 		}
 	}

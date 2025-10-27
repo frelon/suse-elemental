@@ -129,7 +129,7 @@ func generateK8sConfigUnit(deployScript string) (string, error) {
 }
 
 func appendRke2Configuration(s *sys.System, config *butane.Config, k *kubernetes.Kubernetes, configDir image.ConfigDir, configScript string) error {
-	c, err := NewCluster(s, k, configDir.KubernetesConfigDir())
+	c, err := kubernetes.NewCluster(s, k, configDir.KubernetesConfigDir())
 	if err != nil {
 		return fmt.Errorf("failed parsing cluster: %w", err)
 	}
