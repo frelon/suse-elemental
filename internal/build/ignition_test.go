@@ -43,7 +43,9 @@ var _ = Describe("Ignition configuration", func() {
 
 	BeforeEach(func() {
 		buffer = &bytes.Buffer{}
-		fs, cleanup, err = sysmock.TestFS(nil)
+		fs, cleanup, err = sysmock.TestFS(map[string]any{
+			"/etc/kubernetes/config/server.yaml": "",
+		})
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(vfs.MkdirAll(fs, string(buildDir), vfs.DirPerm)).To(Succeed())
@@ -54,7 +56,8 @@ var _ = Describe("Ignition configuration", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 		builder = &Builder{
-			System: system,
+			System:    system,
+			ConfigDir: "/etc/kubernetes",
 		}
 	})
 

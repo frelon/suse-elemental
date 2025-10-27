@@ -23,7 +23,6 @@ import (
 	"io/fs"
 	"maps"
 	"net/netip"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -57,7 +56,7 @@ type Cluster struct {
 
 func NewCluster(s *sys.System, kube *Kubernetes, configPath string) (*Cluster, error) {
 	serverConfigPath := filepath.Join(configPath, serverConfigFile)
-	serverConfig, err := ParseKubernetesConfig(s.Logger(), serverConfigPath)
+	serverConfig, err := ParseKubernetesConfig(s, serverConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("parsing server config: %w", err)
 	}
@@ -90,7 +89,7 @@ func NewCluster(s *sys.System, kube *Kubernetes, configPath string) (*Cluster, e
 	}
 
 	agentConfigPath := filepath.Join(configPath, agentConfigFile)
-	agentConfig, err := ParseKubernetesConfig(s.Logger(), agentConfigPath)
+	agentConfig, err := ParseKubernetesConfig(s, agentConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("parsing agent config: %w", err)
 	}
@@ -112,16 +111,16 @@ func NewCluster(s *sys.System, kube *Kubernetes, configPath string) (*Cluster, e
 	}, nil
 }
 
-func ParseKubernetesConfig(logger log.Logger, configFile string) (map[string]any, error) {
+func ParseKubernetesConfig(s *sys.System, configFile string) (map[string]any, error) {
 	config := map[string]any{}
 
-	b, err := os.ReadFile(configFile)
+	b, err := s.FS().ReadFile(configFile)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return nil, fmt.Errorf("reading kubernetes config file '%s': %w", configFile, err)
 		}
 
-		logger.Warn("Kubernetes config file '%s' was not provided", configFile)
+		s.Logger().Warn("Kubernetes config file '%s' was not provided", configFile)
 
 		// Use an empty config which will be automatically populated later
 		return config, nil
@@ -131,7 +130,7 @@ func ParseKubernetesConfig(logger log.Logger, configFile string) (map[string]any
 		return nil, fmt.Errorf("parsing kubernetes config file '%s': %w", configFile, err)
 	}
 
-	logger.Info("Kubernetes config file '%s' read", configFile)
+	s.Logger().Info("Kubernetes config file '%s' read", configFile)
 
 	return config, nil
 }
