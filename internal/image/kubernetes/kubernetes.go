@@ -33,10 +33,8 @@ type Kubernetes struct {
 	Helm *Helm `yaml:"helm,omitempty"`
 	// LocalManifests - local manifest files specified under config/kubernetes/manifests
 	LocalManifests []string
-	// Nodes - configure nodes
-	Nodes Nodes `yaml:"nodes,omitempty"`
-	// Network - configure node
-	Network Network `yaml:"network,omitempty"`
+	Nodes          Nodes   `yaml:"nodes,omitempty"`
+	Network        Network `yaml:"network,omitempty"`
 }
 
 type Helm struct {
