@@ -164,8 +164,6 @@ func writeK8sResDeployScript(fs vfs.FS, buildDir image.BuildDir, runtimeManifest
 }
 
 func writeK8sConfigDeployScript(fs vfs.FS, buildDir image.BuildDir, k kubernetes.Kubernetes) (string, error) {
-	const k8sResDeployScriptName = "k8s_conf_deploy.sh"
-
 	relativeK8sPath := filepath.Join("/", image.KubernetesPath())
 	destDir := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
 
@@ -193,7 +191,7 @@ func writeK8sConfigDeployScript(fs vfs.FS, buildDir image.BuildDir, k kubernetes
 	}
 
 	fullPath := filepath.Join(destDir, k8sConfDeployScriptName)
-	relativePath := filepath.Join(relativeK8sPath, k8sResDeployScriptName)
+	relativePath := filepath.Join(relativeK8sPath, k8sConfDeployScriptName)
 
 	if err = fs.WriteFile(fullPath, []byte(data), 0o744); err != nil {
 		return "", fmt.Errorf("writing deployment script %q: %w", fullPath, err)
