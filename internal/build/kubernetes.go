@@ -165,7 +165,6 @@ func writeK8sResDeployScript(fs vfs.FS, buildDir image.BuildDir, runtimeManifest
 
 func writeK8sConfigDeployScript(fs vfs.FS, buildDir image.BuildDir, k kubernetes.Kubernetes) (string, error) {
 	relativeK8sPath := filepath.Join("/", image.KubernetesPath())
-	destDir := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
 
 	values := struct {
 		Nodes         kubernetes.Nodes
@@ -178,13 +177,15 @@ func writeK8sConfigDeployScript(fs vfs.FS, buildDir image.BuildDir, k kubernetes
 		APIVIP4:       k.Network.APIVIP4,
 		APIVIP6:       k.Network.APIVIP6,
 		APIHost:       k.Network.APIHost,
-		KubernetesDir: destDir,
+		KubernetesDir: relativeK8sPath,
 	}
 
 	data, err := template.Parse(k8sConfDeployScriptName, k8sConfDeployScriptTpl, &values)
 	if err != nil {
 		return "", fmt.Errorf("parsing deployment template: %w", err)
 	}
+
+	destDir := filepath.Join(buildDir.OverlaysDir(), relativeK8sPath)
 
 	if err = vfs.MkdirAll(fs, destDir, vfs.DirPerm); err != nil {
 		return "", fmt.Errorf("creating destination directory: %w", err)
