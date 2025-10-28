@@ -23,7 +23,7 @@ if [ "$NODETYPE" = "none" ]; then
     exit 1
 fi
 
-CONFIGFILE=/etc/rancher/rke2/$NODETYPE.yaml
+CONFIGFILE="{{ .KubernetesDir }}$NODETYPE.yaml"
 cp $CONFIGFILE /etc/rancher/rke2/config.yaml
 
 {{- if and .APIVIP4 .APIHost }}
