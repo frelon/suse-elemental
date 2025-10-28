@@ -37,13 +37,11 @@ const (
 	serverConfigFile = "server.yaml"
 	agentConfigFile  = "agent.yaml"
 
-	tokenKey       = "token"
-	cniKey         = "cni"
-	serverKey      = "server"
-	tlsSANKey      = "tls-san"
-	disableKey     = "disable"
-	clusterInitKey = "cluster-init"
-	selinuxKey     = "selinux"
+	tokenKey   = "token"
+	cniKey     = "cni"
+	serverKey  = "server"
+	tlsSANKey  = "tls-san"
+	selinuxKey = "selinux"
 )
 
 type Cluster struct {
