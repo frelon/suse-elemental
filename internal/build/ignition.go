@@ -141,7 +141,7 @@ func appendRke2Configuration(s *sys.System, config *butane.Config, k *kubernetes
 
 	config.AddSystemdUnit(k8sConfigUnitName, k8sConfigUnit, true)
 
-	targetDir := "/etc/rancher/rke2"
+	k8sPath := filepath.Join("/", image.KubernetesPath())
 
 	serverBytes, err := marshalConfig(c.ServerConfig)
 	if err != nil {
@@ -149,7 +149,7 @@ func appendRke2Configuration(s *sys.System, config *butane.Config, k *kubernetes
 	}
 
 	config.Storage.Files = append(config.Storage.Files, v0_6.File{
-		Path:     filepath.Join(targetDir, "server.yaml"),
+		Path:     filepath.Join(k8sPath, "server.yaml"),
 		Contents: v0_6.Resource{Inline: util.StrToPtr(string(serverBytes))},
 	})
 
@@ -159,7 +159,7 @@ func appendRke2Configuration(s *sys.System, config *butane.Config, k *kubernetes
 	}
 
 	config.Storage.Files = append(config.Storage.Files, v0_6.File{
-		Path:     filepath.Join(targetDir, "agent.yaml"),
+		Path:     filepath.Join(k8sPath, "agent.yaml"),
 		Contents: v0_6.Resource{Inline: util.StrToPtr(string(agentBytes))},
 	})
 
