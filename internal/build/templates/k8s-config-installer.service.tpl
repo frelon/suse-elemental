@@ -3,6 +3,7 @@ Description=Kubernetes Config Installer
 ConditionPathExists=!/etc/rancher/rke2/config.yaml
 Requires=network-online.target
 Before=rke2-server.service
+Before=rke2-agent.service
 
 [Service]
 Type=oneshot
