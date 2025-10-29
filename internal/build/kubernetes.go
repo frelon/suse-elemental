@@ -93,11 +93,9 @@ func (b *Builder) configureKubernetes(
 		}
 	}
 
-	if len(def.Kubernetes.Nodes) > 0 {
-		k8sConfScript, err = writeK8sConfigDeployScript(b.System.FS(), buildDir, def.Kubernetes)
-		if err != nil {
-			return "", "", fmt.Errorf("writing kubernetes resource deployment script: %w", err)
-		}
+	k8sConfScript, err = writeK8sConfigDeployScript(b.System.FS(), buildDir, def.Kubernetes)
+	if err != nil {
+		return "", "", fmt.Errorf("writing kubernetes resource deployment script: %w", err)
 	}
 
 	return k8sResourceScript, k8sConfScript, nil
