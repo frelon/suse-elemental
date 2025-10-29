@@ -75,7 +75,7 @@ var _ = Describe("Cluster", func() {
 			},
 		}
 
-		cluster, err := NewCluster(s, kubernetes, "/etc/kubernetes/empty")
+		cluster, err := NewCluster(s, kubernetes)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(cluster.ServerConfig).ToNot(BeEmpty())
@@ -94,9 +94,13 @@ var _ = Describe("Cluster", func() {
 				APIVIP4: "192.168.122.50",
 				APIVIP6: "fd12:3456:789a::21",
 			},
+			Config: Config{
+				ServerFilePath: "/etc/kubernetes/single-node/server.yaml",
+				AgentFilePath:  "",
+			},
 		}
 
-		cluster, err := NewCluster(s, kubernetes, "/etc/kubernetes/single-node")
+		cluster, err := NewCluster(s, kubernetes)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(cluster.ServerConfig).ToNot(BeEmpty())
@@ -125,9 +129,13 @@ var _ = Describe("Cluster", func() {
 					Type:     NodeTypeAgent,
 				},
 			},
+			Config: Config{
+				ServerFilePath: "/etc/kubernetes/multi-node/server.yaml",
+				AgentFilePath:  "/etc/kubernetes/multi-node/agent.yaml",
+			},
 		}
 
-		cluster, err := NewCluster(s, kubernetes, "/etc/kubernetes/multi-node")
+		cluster, err := NewCluster(s, kubernetes)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(cluster.ServerConfig).ToNot(BeEmpty())

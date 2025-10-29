@@ -35,6 +35,14 @@ type Kubernetes struct {
 	LocalManifests []string
 	Nodes          Nodes   `yaml:"nodes,omitempty"`
 	Network        Network `yaml:"network,omitempty"`
+	Config         Config  `yaml:"-"`
+}
+
+type Config struct {
+	// AgentFilePath path to agent.yaml rke2 configuration file
+	AgentFilePath string
+	// ServerFilePath path to server.yaml rke2 configuration file
+	ServerFilePath string
 }
 
 type Helm struct {

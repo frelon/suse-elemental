@@ -23,7 +23,6 @@ import (
 	"io/fs"
 	"maps"
 	"net/netip"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/suse/elemental/v3/pkg/log"
 	"github.com/suse/elemental/v3/pkg/sys"
+	"github.com/suse/elemental/v3/pkg/sys/vfs"
 )
 
 const (
@@ -52,9 +52,8 @@ type Cluster struct {
 	AgentConfig map[string]any
 }
 
-func NewCluster(s *sys.System, kube *Kubernetes, configPath string) (*Cluster, error) {
-	serverConfigPath := filepath.Join(configPath, serverConfigFile)
-	serverConfig, err := ParseKubernetesConfig(s, serverConfigPath)
+func NewCluster(s *sys.System, kube *Kubernetes) (*Cluster, error) {
+	serverConfig, err := ParseKubernetesConfig(s, kube.Config.ServerFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("parsing server config: %w", err)
 	}
@@ -86,8 +85,7 @@ func NewCluster(s *sys.System, kube *Kubernetes, configPath string) (*Cluster, e
 		return nil, fmt.Errorf("failed setting multi-node configuration: %w", err)
 	}
 
-	agentConfigPath := filepath.Join(configPath, agentConfigFile)
-	agentConfig, err := ParseKubernetesConfig(s, agentConfigPath)
+	agentConfig, err := ParseKubernetesConfig(s, kube.Config.AgentFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("parsing agent config: %w", err)
 	}
@@ -111,6 +109,11 @@ func NewCluster(s *sys.System, kube *Kubernetes, configPath string) (*Cluster, e
 
 func ParseKubernetesConfig(s *sys.System, configFile string) (map[string]any, error) {
 	config := map[string]any{}
+
+	if exists, _ := vfs.Exists(s.FS(), configFile); !exists {
+		s.Logger().Warn("Kubernetes config file '%s' does not exist", configFile)
+		return config, nil
+	}
 
 	b, err := s.FS().ReadFile(configFile)
 	if err != nil {

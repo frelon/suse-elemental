@@ -56,8 +56,7 @@ var _ = Describe("Ignition configuration", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 		builder = &Builder{
-			System:    system,
-			ConfigDir: "/etc/kubernetes",
+			System: system,
 		}
 	})
 

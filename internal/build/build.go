@@ -48,7 +48,6 @@ type Builder struct {
 	Helm         helmConfigurator
 	DownloadFile downloadFunc
 	Local        bool
-	ConfigDir    image.ConfigDir
 }
 
 func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.BuildDir) error {

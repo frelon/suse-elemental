@@ -88,7 +88,7 @@ func (b *Builder) configureIgnition(def *image.Definition, buildDir image.BuildD
 	}
 
 	if k8sConfScript != "" {
-		err := appendRke2Configuration(b.System, &config, &def.Kubernetes, b.ConfigDir, k8sConfScript)
+		err := appendRke2Configuration(b.System, &config, &def.Kubernetes, k8sConfScript)
 		if err != nil {
 			return fmt.Errorf("failed appending rke2 configuration: %w", err)
 		}
@@ -128,8 +128,8 @@ func generateK8sConfigUnit(deployScript string) (string, error) {
 	return data, nil
 }
 
-func appendRke2Configuration(s *sys.System, config *butane.Config, k *kubernetes.Kubernetes, configDir image.ConfigDir, configScript string) error {
-	c, err := kubernetes.NewCluster(s, k, configDir.KubernetesConfigDir())
+func appendRke2Configuration(s *sys.System, config *butane.Config, k *kubernetes.Kubernetes, configScript string) error {
+	c, err := kubernetes.NewCluster(s, k)
 	if err != nil {
 		return fmt.Errorf("failed parsing cluster: %w", err)
 	}
