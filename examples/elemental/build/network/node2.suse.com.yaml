@@ -4,9 +4,5 @@ interfaces:
     state: up
     mac-address: 52:54:00:12:34:57
     ipv4:
-      address:
-        - ip: 10.0.2.15
-          prefix-length: 24
+      dhcp: true
       enabled: true
-    ipv6:
-      enabled: false
