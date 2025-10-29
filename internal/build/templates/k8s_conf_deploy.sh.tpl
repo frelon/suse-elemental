@@ -17,6 +17,7 @@ NODETYPE="${hosts[$HOSTNAME]:-server}"
 
 CONFIGFILE="{{ .KubernetesDir }}/$NODETYPE.yaml"
 mkdir -p /etc/rancher/rke2
+echo "Copying rke2 config file ${CONFIGFILE}"
 cp $CONFIGFILE /etc/rancher/rke2/config.yaml
 
 {{- if and .APIVIP4 .APIHost }}
