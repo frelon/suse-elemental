@@ -214,7 +214,7 @@ func parseKubernetesDir(f vfs.FS, configDir image.ConfigDir, k *kubernetes.Kuber
 
 	agentYamlPath := filepath.Join(configDir.KubernetesConfigDir(), "agent.yaml")
 	if exists, _ := vfs.Exists(f, agentYamlPath); exists {
-		k.Config.ServerFilePath = agentYamlPath
+		k.Config.AgentFilePath = agentYamlPath
 	}
 
 	return nil
