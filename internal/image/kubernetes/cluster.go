@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"maps"
 	"net/netip"
 	"strings"
 
@@ -95,11 +94,6 @@ func NewCluster(s *sys.System, kube *Kubernetes) (*Cluster, error) {
 	agentConfig[serverKey] = serverConfig[serverKey]
 	agentConfig[selinuxKey] = serverConfig[selinuxKey]
 	agentConfig[cniKey] = serverConfig[cniKey]
-
-	// Create the initializer server config
-	initializerConfig := map[string]any{}
-	maps.Copy(initializerConfig, serverConfig)
-	delete(initializerConfig, serverKey)
 
 	return &Cluster{
 		ServerConfig: serverConfig,
