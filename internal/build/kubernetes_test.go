@@ -252,7 +252,7 @@ var _ = Describe("Kubernetes", func() {
 			script, confScript, err := builder.configureKubernetes(context.Background(), def, manifest, buildDir)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(script).To(BeEmpty())
-			Expect(confScript).To(BeEmpty())
+			Expect(confScript).ToNot(BeEmpty())
 		})
 	})
 })
