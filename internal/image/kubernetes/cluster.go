@@ -148,9 +148,12 @@ func setSingleNodeConfigDefaults(logger log.Logger, kube *Kubernetes, config map
 func setMultiNodeConfigDefaults(logger log.Logger, kube *Kubernetes, config map[string]any, ip4 netip.Addr, ip6 netip.Addr, prioritizeIPv6 bool) error {
 	const rke2ServerPort = 9345
 
-	err := setClusterAPIAddress(config, ip4, ip6, rke2ServerPort, prioritizeIPv6)
-	if err != nil {
-		return err
+	servers := FilterServers(kube.Nodes)
+	if len(servers) > 1 {
+		err := setClusterAPIAddress(config, ip4, ip6, rke2ServerPort, prioritizeIPv6)
+		if err != nil {
+			return err
+		}
 	}
 
 	setClusterToken(logger, config)
@@ -246,6 +249,22 @@ func ServersCount(nodes Nodes) int {
 	}
 
 	return servers
+}
+
+func FilterServers(nodes Nodes) Nodes {
+	return FilterNodeType(nodes, NodeTypeServer)
+}
+
+func FilterNodeType(nodes Nodes, nodeType string) Nodes {
+	ret := Nodes{}
+
+	for _, node := range nodes {
+		if node.Type == nodeType {
+			ret = append(ret, node)
+		}
+	}
+
+	return ret
 }
 
 func IsIPv6Priority(serverConfig map[string]any) bool {
