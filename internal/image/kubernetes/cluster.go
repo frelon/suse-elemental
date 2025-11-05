@@ -145,12 +145,9 @@ func setSingleNodeConfigDefaults(logger log.Logger, kube *Kubernetes, config map
 func setMultiNodeConfigDefaults(logger log.Logger, kube *Kubernetes, config map[string]any, ip4 netip.Addr, ip6 netip.Addr, prioritizeIPv6 bool) error {
 	const rke2ServerPort = 9345
 
-	servers := FilterServers(kube.Nodes)
-	if len(servers) > 1 {
-		err := setClusterAPIAddress(config, ip4, ip6, rke2ServerPort, prioritizeIPv6)
-		if err != nil {
-			return err
-		}
+	err := setClusterAPIAddress(config, ip4, ip6, rke2ServerPort, prioritizeIPv6)
+	if err != nil {
+		return err
 	}
 
 	setClusterToken(logger, config)
