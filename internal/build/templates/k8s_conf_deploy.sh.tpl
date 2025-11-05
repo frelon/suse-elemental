@@ -28,3 +28,9 @@ echo "{{ .APIVIP4 }} {{ .APIHost }}" >> /etc/hosts
 echo "{{ .APIVIP6 }} {{ .APIHost }}" >> /etc/hosts
 {{- end }}
 
+if [ "$NODETYPE" = "agent" ]; then
+    systemctl disable --now rke2-server.service
+    systemctl mask rke2-server.service
+
+    systemctl enable --now rke2-agent.service &
+fi
