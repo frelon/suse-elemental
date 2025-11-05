@@ -33,4 +33,9 @@ if [ "$NODETYPE" = "agent" ]; then
     systemctl mask rke2-server.service
 
     systemctl enable --now rke2-agent.service &
+else
+    systemctl disable --now rke2-agent.service
+    systemctl mask rke2-agent.service
+
+    systemctl enable --now rke2-server.service &
 fi
