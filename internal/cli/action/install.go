@@ -31,6 +31,7 @@ import (
 	"github.com/suse/elemental/v3/pkg/firmware"
 	"github.com/suse/elemental/v3/pkg/install"
 	"github.com/suse/elemental/v3/pkg/installer"
+	"github.com/suse/elemental/v3/pkg/security"
 	"github.com/suse/elemental/v3/pkg/sys"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
 	"github.com/suse/elemental/v3/pkg/transaction"
@@ -134,11 +135,7 @@ func setBootloader(s *sys.System, d *deployment.Deployment, flags *cmd.InstallFl
 		d.BootConfig.KernelCmdline = flags.KernelCmdline
 	}
 
-	if flags.EnableFips {
-		d.Fips = &deployment.FipsConfig{
-			Enabled: true,
-		}
-
+	if d.IsFipsEnabled() {
 		bootFlag := fmt.Sprintf("boot=LABEL=%s", deployment.EfiLabel)
 		d.BootConfig.KernelCmdline = fmt.Sprintf("%s %s %s", d.BootConfig.KernelCmdline, "fips=1", bootFlag)
 	}
@@ -186,6 +183,12 @@ func digestInstallSetup(s *sys.System, flags *cmd.InstallFlags) (*deployment.Dep
 
 	if flags.ConfigScript != "" {
 		d.CfgScript = flags.ConfigScript
+	}
+
+	if flags.EnableFips {
+		d.Security.Policy = security.FIPSPolicy
+	} else {
+		d.Security.Policy = security.DefaultPolicy
 	}
 
 	setBootloader(s, d, flags)
