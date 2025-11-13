@@ -31,9 +31,6 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/suse/elemental/v3/pkg/block"
-	"github.com/suse/elemental/v3/pkg/block/lsblk"
-	"github.com/suse/elemental/v3/pkg/cleanstack"
 	"github.com/suse/elemental/v3/pkg/deployment"
 	"github.com/suse/elemental/v3/pkg/rsync"
 	"github.com/suse/elemental/v3/pkg/sys"
@@ -42,9 +39,7 @@ import (
 )
 
 type Grub struct {
-	s      *sys.System
-	clean  *cleanstack.CleanStack
-	device block.Device
+	s *sys.System
 }
 
 type grubBootEntry struct {
@@ -58,19 +53,13 @@ type grubBootEntry struct {
 type Option func(*Grub)
 
 func NewGrub(s *sys.System, opts ...Option) *Grub {
-	g := &Grub{s, cleanstack.NewCleanStack(), lsblk.NewLsDevice(s)}
+	g := &Grub{s}
 
 	for _, opt := range opts {
 		opt(g)
 	}
 
 	return g
-}
-
-func WithDevice(device block.Device) Option {
-	return func(g *Grub) {
-		g.device = device
-	}
 }
 
 const (
@@ -169,49 +158,10 @@ func (g *Grub) Install(rootPath, snapshotID, kernelCmdline string, d *deployment
 }
 
 // Prune prunes old boot entries and artifacts not in the passed in keepSnapshotIDs.
-func (g Grub) Prune(rootPath string, keepSnapshotIDs []int, d *deployment.Deployment) (err error) {
-	esp := d.GetEfiPartition()
-	if esp == nil {
-		return fmt.Errorf("ESP not found")
-	}
+func (g Grub) Prune(rootPath, espDir string, keepSnapshotIDs []int) (err error) {
+	g.s.Logger().Info("Pruning old boot artifacts in %s", espDir)
 
-	g.s.Logger().Info("Pruning old boot artifacts in %s", esp.Label)
-
-	bootDir := filepath.Join(rootPath, esp.MountPoint)
-	err = vfs.MkdirAll(g.s.FS(), bootDir, vfs.DirPerm)
-	if err != nil {
-		return fmt.Errorf("failed creating target directory %s: %w", bootDir, err)
-	}
-
-	efiDisk := d.GetEfiDisk()
-	if efiDisk == nil {
-		return fmt.Errorf("EFI disk not found")
-	}
-
-	hwPartitions, err := g.device.GetDevicePartitions(efiDisk.Device)
-	if err != nil {
-		return fmt.Errorf("listing host partitions: %w", err)
-	}
-
-	hwEfiPart := hwPartitions.GetByLabel(esp.Label)
-	if hwEfiPart == nil {
-		return fmt.Errorf("unknown efi partition")
-	}
-
-	err = g.s.Mounter().Mount(hwEfiPart.Path, bootDir, esp.FileSystem.String(), esp.MountOpts)
-	if err != nil {
-		return fmt.Errorf("failed mounting ESP to %s: %w", bootDir, err)
-	}
-	g.clean.Push(func() error { return g.s.Mounter().Unmount(bootDir) })
-
-	defer func() {
-		err = g.clean.Cleanup(err)
-		if err != nil {
-			g.s.Logger().Error("Failed cleaning up after bootloader pruning: %s", err.Error())
-		}
-	}()
-
-	grubEnvPath := filepath.Join(bootDir, grubEnvFile)
+	grubEnvPath := filepath.Join(espDir, grubEnvFile)
 	grubEnv, err := g.readGrubEnv(grubEnvPath)
 	if err != nil {
 		return fmt.Errorf("reading grubenv: %w", err)
@@ -239,7 +189,7 @@ func (g Grub) Prune(rootPath string, keepSnapshotIDs []int, d *deployment.Deploy
 		toDelete = append(toDelete, entry)
 	}
 
-	entriesDir := filepath.Join(rootPath, esp.MountPoint, "loader", "entries")
+	entriesDir := filepath.Join(espDir, "loader", "entries")
 	for _, entry := range toDelete {
 		err = g.s.FS().Remove(filepath.Join(entriesDir, entry))
 		if err != nil {
@@ -259,14 +209,14 @@ func (g Grub) Prune(rootPath string, keepSnapshotIDs []int, d *deployment.Deploy
 		return fmt.Errorf("failed saving %s: %w", grubEnvPath, err)
 	}
 
-	return g.pruneOldKernels(rootPath, esp, activeEntries)
+	return g.pruneOldKernels(rootPath, espDir, activeEntries)
 }
 
-func (g Grub) pruneOldKernels(rootPath string, esp *deployment.Partition, activeEntries []string) error {
+func (g Grub) pruneOldKernels(rootPath, espDir string, activeEntries []string) error {
 	activeKernels := map[string]bool{}
 
 	for _, entry := range activeEntries {
-		grubEnv := filepath.Join(rootPath, esp.MountPoint, "loader", "entries", entry)
+		grubEnv := filepath.Join(espDir, "loader", "entries", entry)
 		vars, err := g.readGrubEnv(grubEnv)
 		if err != nil {
 			return fmt.Errorf("failed reading grubenv '%s': %w", grubEnv, err)
@@ -293,7 +243,7 @@ func (g Grub) pruneOldKernels(rootPath string, esp *deployment.Partition, active
 	}
 
 	// look for older kernels
-	kernelDir := filepath.Join(rootPath, esp.MountPoint, osID)
+	kernelDir := filepath.Join(espDir, osID)
 	kernelDirs, err := g.s.FS().ReadDir(kernelDir)
 	if err != nil {
 		return fmt.Errorf("reading sub-directories: %w", err)

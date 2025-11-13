@@ -28,7 +28,7 @@ import (
 type Bootloader interface {
 	Install(rootPath, snapshotID, kernelCmdline string, d *deployment.Deployment) error
 	InstallLive(rootPath, target, kernelCmdline string) error
-	Prune(rootPath string, keepSnapshotIDs []int, d *deployment.Deployment) error
+	Prune(rootPath, espDir string, keepSnapshotIDs []int) error
 }
 
 const (
@@ -54,7 +54,7 @@ func (n *None) InstallLive(_, _, _ string) error {
 	return nil
 }
 
-func (n *None) Prune(_ string, _ []int, _ *deployment.Deployment) error {
+func (n *None) Prune(_, _ string, _ []int) error {
 	n.s.Logger().Info("Skipping bootloader pruning")
 	return nil
 }

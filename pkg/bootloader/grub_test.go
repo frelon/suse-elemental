@@ -26,8 +26,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/suse/elemental/v3/pkg/block"
-	"github.com/suse/elemental/v3/pkg/block/mock"
 	"github.com/suse/elemental/v3/pkg/bootloader"
 	"github.com/suse/elemental/v3/pkg/deployment"
 	"github.com/suse/elemental/v3/pkg/log"
@@ -109,24 +107,7 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 			},
 		}
 
-		blk := mock.NewBlockDevice([]*block.Partition{
-			{
-				Name:       "/dev/loop0p1",
-				Label:      deployment.EfiLabel,
-				UUID:       "1234-ABCD",
-				FileSystem: deployment.VFat.String(),
-				Disk:       "/dev/loop0",
-			},
-			{
-				Name:       "/dev/loop0p2",
-				Label:      deployment.SystemLabel,
-				UUID:       "2345-ABCD",
-				FileSystem: deployment.Ext4.String(),
-				Disk:       "/dev/loop0",
-			},
-		}...)
-
-		grub = bootloader.NewGrub(s, bootloader.WithDevice(blk))
+		grub = bootloader.NewGrub(s)
 
 		// Setup GRUB and EFI dirs
 		Expect(vfs.MkdirAll(tfs, "/target/dir/usr/share/efi/x86_64", vfs.DirPerm)).To(Succeed())
@@ -282,7 +263,7 @@ var _ = Describe("Grub tests", Label("bootloader", "grub"), func() {
 		Expect(string(entries)).To(Equal("entries=active 2 1"))
 
 		// Prune snapshot 1 (keep 2)
-		err = grub.Prune("/target/dir", []int{2}, d)
+		err = grub.Prune("/target/dir", "/target/dir/boot/", []int{2})
 		Expect(err).ToNot(HaveOccurred())
 
 		entries, err = tfs.ReadFile("/target/dir/boot/grubenv")

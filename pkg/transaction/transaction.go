@@ -65,7 +65,7 @@ type Transaction struct {
 type Interface interface {
 	Init(deployment.Deployment) (UpgradeHelper, error)
 	Start() (*Transaction, error)
-	Commit(*Transaction) error
+	Commit(trans *Transaction, cleanup func() error) error
 	Rollback(*Transaction, error) error
 
 	GetActiveSnapshotIDs() ([]int, error)

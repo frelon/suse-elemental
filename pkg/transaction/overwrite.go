@@ -47,8 +47,11 @@ func NewOverwrite(ctx context.Context, s *sys.System, d *deployment.Deployment, 
 var _ Interface = (*Overwrite)(nil)
 var _ UpgradeHelper = (*Overwrite)(nil)
 
-func (n Overwrite) Commit(trans *Transaction) (err error) {
+func (n Overwrite) Commit(trans *Transaction, cleanup func() error) (err error) {
 	trans.status = committed
+	if cleanup != nil {
+		n.cleanStack.Push(cleanup)
+	}
 	return n.cleanStack.Cleanup(err)
 }
 

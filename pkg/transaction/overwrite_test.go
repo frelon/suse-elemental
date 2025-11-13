@@ -84,7 +84,7 @@ var _ = Describe("OverwriteTransaction", Label("transaction", "overwrite"), func
 		Expect(err).To(Succeed())
 		tran, err := overwrite.Start()
 		Expect(err).To(Succeed())
-		err = overwrite.Commit(tran)
+		err = overwrite.Commit(tran, nil)
 		Expect(err).To(Succeed())
 	})
 

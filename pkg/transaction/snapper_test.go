@@ -55,10 +55,25 @@ var _ = Describe("SnapperTransaction", Label("transaction"), func() {
 					}
 					return runner.ReturnValue, runner.ReturnError
 				}
-				Expect(sn.Commit(trans)).To(Succeed())
+				Expect(sn.Commit(trans, nil)).To(Succeed())
 				Expect(runner.MatchMilestones([][]string{
 					{"snapper", "--no-dbus", "--root", "/some/root/@/.snapshots/1/snapshot", "modify", "--default"},
 				})).To(Succeed())
+			})
+			It("commit fails if the callback returns error", func() {
+				commitCallback := func() error {
+					return fmt.Errorf("commit callback failed")
+				}
+				sideEffects["snapper"] = func(args ...string) ([]byte, error) {
+					if slices.Contains(args, "create") {
+						return []byte("2\n"), nil
+					}
+					if slices.Contains(args, "list") {
+						return []byte(installSnapList), nil
+					}
+					return runner.ReturnValue, runner.ReturnError
+				}
+				Expect(sn.Commit(trans, commitCallback)).To(MatchError(ContainSubstring("commit callback failed")))
 			})
 			It("commits a transaction with error if context is cancelled", func() {
 				sideEffects["snapper"] = func(args ...string) ([]byte, error) {
@@ -71,7 +86,7 @@ var _ = Describe("SnapperTransaction", Label("transaction"), func() {
 					return runner.ReturnValue, runner.ReturnError
 				}
 				cancel()
-				err := sn.Commit(trans)
+				err := sn.Commit(trans, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("context canceled"))
 				Expect(runner.MatchMilestones([][]string{
@@ -88,13 +103,13 @@ var _ = Describe("SnapperTransaction", Label("transaction"), func() {
 					}
 					return runner.ReturnValue, runner.ReturnError
 				}
-				err = sn.Commit(trans)
+				err = sn.Commit(trans, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("setting new default snapshot: failed setting default"))
 			})
 			It("fails to commit a non started transaction", func() {
 				trans = &transaction.Transaction{ID: 4}
-				err := sn.Commit(trans)
+				err := sn.Commit(trans, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("transaction '4' is not started"))
 			})
@@ -152,9 +167,12 @@ var _ = Describe("SnapperTransaction", Label("transaction"), func() {
 							return []byte("2\n"), nil
 						}
 					}
+					if slices.Contains(args, "list") {
+						return []byte(installSnapList), nil
+					}
 					return runner.ReturnValue, runner.ReturnError
 				}
-				Expect(sn.Commit(trans)).To(Succeed())
+				Expect(sn.Commit(trans, nil)).To(Succeed())
 				Expect(runner.MatchMilestones([][]string{
 					{"snapper", "--no-dbus", "--root", "/.snapshots/5/snapshot", "modify", "--default"},
 				})).To(Succeed())

@@ -125,7 +125,7 @@ func (sn snapperT) Start() (trans *Transaction, err error) {
 }
 
 // Commit closes the current transaction (fstab update, SELinux relabel, set snapshot as RO, ...)
-func (sn snapperT) Commit(trans *Transaction) (err error) {
+func (sn snapperT) Commit(trans *Transaction, cleanup func() error) (err error) {
 	defer func() { err = sn.checkCancelled(err) }()
 
 	if trans.status != started {
@@ -144,20 +144,21 @@ func (sn snapperT) Commit(trans *Transaction) (err error) {
 	if err != nil {
 		return fmt.Errorf("setting new default snapshot: %w", err)
 	}
-
-	// We are ignoring these errors as the default snapshot is already changed
-	// so rebooting is expected to succeed to the new system already
-	iErr := sn.snap.Cleanup(sn.rootDir, sn.maxSnapshots)
-	if iErr != nil {
-		sn.s.Logger().Warn("failed to clear old snapshots")
+	// Default snapshot is already set, hence from now on the transaction can't be rolledback
+	// anymore.
+	trans.status = committed
+	if cleanup != nil {
+		sn.cleanStack.Push(cleanup)
 	}
-	iErr = sn.cleanStack.Cleanup(err)
-	if iErr != nil {
-		sn.s.Logger().Warn("failed to cleanup transaction resources")
+	sn.cleanStack.Push(func() error { return sn.snap.Cleanup(sn.rootDir, sn.maxSnapshots) })
+
+	err = sn.cleanStack.Cleanup(err)
+	if err != nil {
+		sn.s.Logger().Error("transaction cleanup procedure failed after committing")
 	}
 	sn.s.Logger().Info("Transaction closed")
-	trans.status = committed
-	return nil
+
+	return err
 }
 
 // Rollback closes the given in progress transaction by deleting the

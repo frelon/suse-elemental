@@ -78,7 +78,7 @@ func (t Transactioner) Start() (*transaction.Transaction, error) {
 	return t.Trans, t.StartErr
 }
 
-func (t Transactioner) Commit(_ *transaction.Transaction) error {
+func (t Transactioner) Commit(_ *transaction.Transaction, _ func() error) error {
 	return t.CommitErr
 }
 

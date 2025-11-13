@@ -20,6 +20,7 @@ package upgrade
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -106,6 +107,11 @@ func (u Upgrader) Upgrade(d *deployment.Deployment) (err error) {
 	defer func() { err = cleanup.Cleanup(err) }()
 
 	var uh transaction.UpgradeHelper
+
+	esp := d.GetEfiPartition()
+	if esp == nil {
+		return fmt.Errorf("no EFI partition defined in deployment")
+	}
 
 	uh, err = u.t.Init(*d)
 	if err != nil {
@@ -194,17 +200,21 @@ func (u Upgrader) Upgrade(d *deployment.Deployment) (err error) {
 		}
 	}
 
-	err = u.t.Commit(trans)
+	commitCleanup := func() error {
+		snapshots, err := u.t.GetActiveSnapshotIDs()
+		if err != nil {
+			return fmt.Errorf("get active snapshots: %w", err)
+		}
+
+		return u.b.Prune(trans.Path, filepath.Join(trans.Path, esp.MountPoint), snapshots)
+	}
+
+	err = u.t.Commit(trans, commitCleanup)
 	if err != nil {
 		return fmt.Errorf("committing transaction: %w", err)
 	}
 
-	snapshots, err := u.t.GetActiveSnapshotIDs()
-	if err != nil {
-		return fmt.Errorf("get active snapshots: %w", err)
-	}
-
-	return u.b.Prune(trans.Path, snapshots, d)
+	return nil
 }
 
 func (u Upgrader) configHook(config string, root string) error {
