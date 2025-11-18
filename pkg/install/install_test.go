@@ -32,7 +32,6 @@ import (
 	"github.com/suse/elemental/v3/pkg/sys"
 	sysmock "github.com/suse/elemental/v3/pkg/sys/mock"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
-	"github.com/suse/elemental/v3/pkg/unpack"
 )
 
 func TestInstallSuite(t *testing.T) {
@@ -102,8 +101,6 @@ type upgraderMock struct {
 func (u upgraderMock) Upgrade(_ *deployment.Deployment) error {
 	return u.Error
 }
-
-func (u *upgraderMock) SetUnpackOpts(opts ...unpack.Opt) {}
 
 var _ = Describe("Install", Label("install"), func() {
 	var runner *sysmock.Runner

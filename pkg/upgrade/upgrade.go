@@ -41,7 +41,6 @@ const configFile = "/etc/elemental/config.sh"
 
 type Interface interface {
 	Upgrade(*deployment.Deployment) error
-	SetUnpackOpts(opts ...unpack.Opt)
 }
 
 type Option func(*Upgrader)
@@ -100,12 +99,6 @@ func New(ctx context.Context, s *sys.System, opts ...Option) *Upgrader {
 		up.b = bootloader.NewNone(s)
 	}
 	return up
-}
-
-// SetUnpackOpts defines the unpacker options the upgrader will use for
-// the upgrade process.
-func (u *Upgrader) SetUnpackOpts(opts ...unpack.Opt) {
-	u.unpackOpts = opts
 }
 
 //nolint:gocyclo

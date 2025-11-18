@@ -73,12 +73,11 @@ func New(ctx context.Context, s *sys.System, opts ...Option) *Installer {
 		o(installer)
 	}
 	if installer.u == nil {
-		installer.u = upgrade.New(ctx, s)
+		installer.u = upgrade.New(ctx, s, upgrade.WithUnpackOpts(installer.unpackOpts...))
 	}
 	if installer.b == nil {
 		installer.b = bootloader.NewNone(s)
 	}
-	installer.u.SetUnpackOpts(installer.unpackOpts...)
 	return installer
 }
 

@@ -148,13 +148,15 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 		return err
 	}
 
+	unpackOpts := unpack.WithLocal(b.Local)
 	manager := firmware.NewEfiBootManager(b.System)
 	upgrader := upgrade.New(
 		ctx, b.System, upgrade.WithBootManager(manager), upgrade.WithBootloader(boot),
+		upgrade.WithUnpackOpts(unpackOpts),
 	)
 	installer := install.New(
 		ctx, b.System, install.WithUpgrader(upgrader),
-		install.WithUnpackOpts(unpack.WithLocal(b.Local)),
+		install.WithUnpackOpts(unpackOpts),
 	)
 
 	logger.Info("Installing OS")
