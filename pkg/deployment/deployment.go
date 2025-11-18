@@ -229,10 +229,6 @@ type LiveInstaller struct {
 	KernelCmdline string       `yaml:"kernelCmdline,omitempty"`
 }
 
-type ExtensionsConfig struct {
-	KernelModules []string `yaml:"kernelModules,omitempty"`
-}
-
 type Deployment struct {
 	SourceOS    *ImageSource       `yaml:"sourceOS"`
 	Disks       []*Disk            `yaml:"disks"`
@@ -243,7 +239,6 @@ type Deployment struct {
 	OverlayTree *ImageSource       `yaml:"overlayTree,omitempty"`
 	CfgScript   string             `yaml:"configScript,omitempty"`
 	Installer   LiveInstaller      `yaml:"installer,omitempty"`
-	Extensions  *ExtensionsConfig  `yaml:"extensions,omitempty"`
 }
 
 type Opt func(d *Deployment)
@@ -535,7 +530,6 @@ func DefaultDeployment() *Deployment {
 		Snapshotter: &SnapshotterConfig{
 			Name: "snapper",
 		},
-		Extensions: &ExtensionsConfig{},
 	}
 }
 

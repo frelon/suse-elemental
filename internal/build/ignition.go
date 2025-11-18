@@ -30,6 +30,8 @@ import (
 	"github.com/suse/elemental/v3/internal/image"
 	"github.com/suse/elemental/v3/internal/image/kubernetes"
 	"github.com/suse/elemental/v3/internal/template"
+	"github.com/suse/elemental/v3/pkg/extensions"
+	"github.com/suse/elemental/v3/pkg/manifest/api"
 	"github.com/suse/elemental/v3/pkg/sys"
 )
 
@@ -48,10 +50,15 @@ var k8sResourceUnitTpl string
 //go:embed templates/k8s-config-installer.service.tpl
 var k8sConfigUnitTpl string
 
-// configureIngition writes the ignition configuration file based on the provided butane configuration
-// and the given kubernetes configuration
-func (b *Builder) configureIgnition(def *image.Definition, buildDir image.BuildDir, k8sScript, k8sConfScript string) error {
-	if len(def.ButaneConfig) == 0 && k8sScript == "" && k8sConfScript == "" {
+// configureIgnition writes the Ignition configuration file including:
+// * Predefined Butane configuration
+// * Kubernetes configuration and deployment files
+// * Systemd extensions
+func (b *Builder) configureIgnition(def *image.Definition, buildDir image.BuildDir, k8sScript, k8sConfScript string, ext []api.SystemdExtension) error {
+	if len(def.ButaneConfig) == 0 &&
+		k8sScript == "" &&
+		k8sConfScript == "" &&
+		len(ext) == 0 {
 		b.System.Logger().Info("No ignition configuration required")
 		return nil
 	}
@@ -92,6 +99,18 @@ func (b *Builder) configureIgnition(def *image.Definition, buildDir image.BuildD
 		if err != nil {
 			return fmt.Errorf("failed appending rke2 configuration: %w", err)
 		}
+	}
+
+	if len(ext) > 0 {
+		data, err := extensions.Serialize(ext)
+		if err != nil {
+			return fmt.Errorf("serializing extensions: %w", err)
+		}
+
+		config.Storage.Files = append(config.Storage.Files, v0_6.File{
+			Path:     extensions.File,
+			Contents: v0_6.Resource{Inline: util.StrToPtr(data)},
+		})
 	}
 
 	ignitionFile := filepath.Join(buildDir.FirstbootConfigDir(), image.IgnitionFilePath())

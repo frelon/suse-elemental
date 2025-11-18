@@ -23,26 +23,26 @@ import (
 	"fmt"
 
 	"github.com/suse/elemental/v3/pkg/cleanstack"
-	"github.com/suse/elemental/v3/pkg/deployment"
+	"github.com/suse/elemental/v3/pkg/extensions"
 	"github.com/suse/elemental/v3/pkg/sys"
 	"github.com/suse/elemental/v3/pkg/sys/vfs"
 )
 
 func ListKernelModules(s *sys.System) ([]string, error) {
-	d, err := deployment.Parse(s, "/")
+	ext, err := extensions.Parse(s, "/")
 	if err != nil {
-		return nil, fmt.Errorf("parsing deployment information: %w", err)
-	} else if d == nil {
-		return nil, fmt.Errorf("deployment information not found")
+		return nil, fmt.Errorf("reading enabled extensions: %w", err)
 	}
 
 	var kernelModules []string
 
-	if d.Extensions != nil {
-		kernelModules = d.Extensions.KernelModules
+	for _, e := range ext {
+		if len(e.KernelModules) != 0 {
+			kernelModules = append(kernelModules, e.KernelModules...)
+		}
 	}
 
-	// TODO (atanasdinov): Merge modules from deployment.yaml with ones coming from CLI args?
+	// TODO (atanasdinov): Merge modules from extensions.yaml with ones coming from CLI args?
 
 	return kernelModules, nil
 }

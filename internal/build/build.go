@@ -76,30 +76,22 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 		return err
 	}
 
-	if k8sScript != "" || len(d.ButaneConfig) > 0 || k8sConfScript != "" {
-		if err = b.configureIgnition(d, buildDir, k8sScript, k8sConfScript); err != nil {
-			logger.Error("Configuring Ignition failed")
-			return err
-		}
-	}
-
 	extensions, err := enabledExtensions(m, d, logger)
 	if err != nil {
 		logger.Error("Filtering enabled systemd extensions failed")
 		return err
 	}
 
-	var kernelModulesFromExtensions []string
-
 	if len(extensions) != 0 {
-		for _, extension := range extensions {
-			kernelModulesFromExtensions = append(kernelModulesFromExtensions, extension.KernelModules...)
-		}
-
 		if err = b.downloadSystemExtensions(ctx, extensions, buildDir); err != nil {
 			logger.Error("Downloading system extensions failed")
 			return err
 		}
+	}
+
+	if err = b.configureIgnition(d, buildDir, k8sScript, k8sConfScript, extensions); err != nil {
+		logger.Error("Configuring Ignition failed")
+		return err
 	}
 
 	logger.Info("Creating RAW disk image")
@@ -134,7 +126,6 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 		d.Installation.KernelCmdLine,
 		m.CorePlatform.Components.OperatingSystem.Image,
 		buildDir,
-		kernelModulesFromExtensions,
 		preparePart,
 	)
 	if err != nil {
@@ -174,7 +165,6 @@ func newDeployment(
 	system *sys.System,
 	installationDevice, bootloader, kernelCmdLine, osImage string,
 	buildDir image.BuildDir,
-	kernelModules []string,
 	customPartitions ...*deployment.Partition,
 ) (*deployment.Deployment, error) {
 	var d *deployment.Deployment
@@ -196,7 +186,6 @@ func newDeployment(
 	d.Disks[0].Device = installationDevice
 	d.BootConfig.Bootloader = bootloader
 	d.BootConfig.KernelCmdline = kernelCmdLine
-	d.Extensions.KernelModules = kernelModules
 
 	osURI := fmt.Sprintf("%s://%s", deployment.OCI, osImage)
 	osSource, err := deployment.NewSrcFromURI(osURI)

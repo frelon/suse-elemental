@@ -101,6 +101,6 @@ type Systemd struct {
 type SystemdExtension struct {
 	Name          string   `yaml:"name"`
 	Image         string   `yaml:"image"`
-	Required      bool     `yaml:"required"`
+	Required      bool     `yaml:"required,omitempty"`
 	KernelModules []string `yaml:"kernelModules,omitempty"`
 }
