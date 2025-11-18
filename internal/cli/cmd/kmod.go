@@ -55,7 +55,7 @@ func NewKernelModulesCommand(appName string, action func(*cli.Context) error) *c
 			},
 			&cli.BoolFlag{
 				Name:        "unload",
-				Usage:       "Unload kernel modules",
+				Usage:       "[EXPERIMENTAL] Unload kernel modules",
 				Destination: &KernelModulesArgs.Unload,
 			},
 		},

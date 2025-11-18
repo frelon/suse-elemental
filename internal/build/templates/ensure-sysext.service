@@ -18,7 +18,6 @@ ExecStart=/usr/bin/systemctl daemon-reload
 # TODO (atanasdinov): Investigate a SELinux limitation where elemental3ctl cannot be called directly here
 ExecStart=/bin/sh -c "/usr/bin/elemental3ctl kmod --reload"
 ExecStart=/usr/bin/systemctl restart --no-block sockets.target timers.target multi-user.target
-ExecStop=/bin/sh -c "/usr/bin/elemental3ctl kmod --unload"
 
 [Install]
 WantedBy=sysinit.target
