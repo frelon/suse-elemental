@@ -27,7 +27,6 @@ import (
 	"github.com/suse/elemental/v3/internal/manifest/extractor"
 	"github.com/suse/elemental/v3/pkg/bootloader"
 	"github.com/suse/elemental/v3/pkg/deployment"
-	"github.com/suse/elemental/v3/pkg/firmware"
 	"github.com/suse/elemental/v3/pkg/install"
 	"github.com/suse/elemental/v3/pkg/manifest/resolver"
 	"github.com/suse/elemental/v3/pkg/manifest/source"
@@ -133,9 +132,8 @@ func (b *Builder) Run(ctx context.Context, d *image.Definition, buildDir image.B
 		return err
 	}
 
-	manager := firmware.NewEfiBootManager(b.System)
 	upgrader := upgrade.New(
-		ctx, b.System, upgrade.WithBootManager(manager), upgrade.WithBootloader(boot),
+		ctx, b.System, upgrade.WithBootloader(boot),
 	)
 	installer := install.New(
 		ctx, b.System, install.WithUpgrader(upgrader),
