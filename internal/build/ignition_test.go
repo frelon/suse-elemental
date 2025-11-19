@@ -141,6 +141,8 @@ passwd:
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(ignition).To(ContainSubstring("/etc/elemental/extensions.yaml"))
+		Expect(ignition).To(ContainSubstring("Reload systemd units"))
+		Expect(ignition).To(ContainSubstring("Reload kernel modules"))
 		Expect(ignition).NotTo(ContainSubstring("merge"))
 		Expect(ignition).NotTo(ContainSubstring("Kubernetes Resources Installer"))
 		Expect(ignition).NotTo(ContainSubstring("Kubernetes Config Installer"))

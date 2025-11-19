@@ -36,13 +36,17 @@ import (
 )
 
 const (
-	ensureSysextUnitName = "ensure-sysext.service"
-	k8sResourcesUnitName = "k8s-resource-installer.service"
-	k8sConfigUnitName    = "k8s-config-installer.service"
+	ensureSysextUnitName        = "ensure-sysext.service"
+	reloadKernelModulesUnitName = "reload-kernel-modules.service"
+	k8sResourcesUnitName        = "k8s-resource-installer.service"
+	k8sConfigUnitName           = "k8s-config-installer.service"
 )
 
 //go:embed templates/ensure-sysext.service
 var ensureSysextUnit string
+
+//go:embed templates/reload-kernel-modules.service
+var reloadKernelModulesUnit string
 
 //go:embed templates/k8s-resource-installer.service.tpl
 var k8sResourceUnitTpl string
@@ -90,7 +94,6 @@ func (b *Builder) configureIgnition(def *image.Definition, buildDir image.BuildD
 			return err
 		}
 
-		config.AddSystemdUnit(ensureSysextUnitName, ensureSysextUnit, true)
 		config.AddSystemdUnit(k8sResourcesUnitName, k8sResourcesUnit, true)
 	}
 
@@ -111,6 +114,9 @@ func (b *Builder) configureIgnition(def *image.Definition, buildDir image.BuildD
 			Path:     extensions.File,
 			Contents: v0_6.Resource{Inline: util.StrToPtr(data)},
 		})
+
+		config.AddSystemdUnit(ensureSysextUnitName, ensureSysextUnit, true)
+		config.AddSystemdUnit(reloadKernelModulesUnitName, reloadKernelModulesUnit, true)
 	}
 
 	ignitionFile := filepath.Join(buildDir.FirstbootConfigDir(), image.IgnitionFilePath())

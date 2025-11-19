@@ -1,0 +1,15 @@
+[Unit]
+Description=Reload kernel modules provided by sysexts
+After=systemd-sysext.service
+DefaultDependencies=no
+ConditionPathExists=/usr/bin/elemental3ctl
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# TODO (atanasdinov): Investigate a SELinux limitation where elemental3ctl cannot be called directly here
+ExecStart=/bin/sh -c "/usr/bin/elemental3ctl kmod --reload"
+TimeoutStartSec=1min
+
+[Install]
+WantedBy=sysinit.target
